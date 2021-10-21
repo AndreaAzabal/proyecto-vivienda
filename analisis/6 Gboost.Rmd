@@ -1,0 +1,338 @@
+---
+title: 'MÓDULO 5: Técnicas Avanzadas de Predicción'
+author: "Andrea Azabal Lamoso"
+date: "24/05/2021"
+output:
+  word_document:
+    toc: yes
+  html_document:
+    toc: yes
+    df_print: paged
+  pdf_document:
+    toc: yes
+subtitle: GRADIENT BOOST
+---
+
+<style>
+body {
+text-align: justify}
+</style>
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy = TRUE)
+library(spatialreg)
+library(knitr)
+library(pander)
+library(kableExtra)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggcorrplot)
+suppressPackageStartupMessages(library(tidyverse))
+library(reticulate)
+require(effects)
+source("Functions_TFM.R")
+source("Functions.R")
+library(gbm)
+```
+
+
+
+```{r}
+#sin villaverde
+tabla<-read.csv("tabla_dummy.csv",sep=",",encoding="UTF-8")
+head(tabla)
+
+formula_completa<-as.formula('log.pm~habitaciones+baths+terraza+ascensor+aire+garaje+piscina+trastero+armarios+reformar+exterior+balcon+duplex+estudio+piso+dens_cc+dens_hospital+log.dist_tp+dens_colegios+dist_centro+arganzuela+barajas+carabanchel+centro+chamartin+chamberi+ciudad_lineal+fuencarral+hortaleza+latina+moncloa+moratalaz+puente_de_vallecas+retiro+salamanca+san_blas+tetuan+usera+vicalvaro+villa_de_vallecas')
+```
+
+
+
+
+------------------------grid
+
+```{r}
+## 70% of the sample size
+smp_size <- floor(0.70 * nrow(tabla))
+
+## set the seed to make your partition reproducible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(tabla)), size = smp_size)
+
+train <- tabla[train_ind, ]
+test <- tabla[-train_ind, ]
+```
+
+```{r}
+# create grid search
+hyper_grid <- expand.grid(
+  learning_rate = c(0.1,0.05, 0.01, 0.005,0.001),
+  RMSE = NA,
+  trees = NA,
+  time = NA,
+  r2test = NA,
+  interaction.depth = c(1,2,3)
+)
+
+# execute grid search
+for(i in seq_len(nrow(hyper_grid))) {
+
+  # fit gbm
+  set.seed(123)  # for reproducibility
+  train_time <- system.time({
+    m <- gbm(
+      formula = formula_completa,
+      data = train,
+      distribution = "gaussian",
+      n.trees = 10000, 
+      shrinkage = hyper_grid$learning_rate[i], 
+      interaction.depth = hyper_grid$interaction.depth[i], 
+      cv.folds = 10 
+   )
+  })
+  
+  p <- predict(m, newdata=test, n.trees=which.min(m$cv.error))
+  r=(p-test$log.pm)
+  s=sum((r) **2)
+  sy=sum((test$log.pm-mean(test$log.pm))**2)
+  r2test=1-s/sy
+  
+  p_train <- predict(m, newdata=train, n.trees=which.min(m$cv.error))
+  r_train=(p_train-train$log.pm)
+  s_train=sum((r_train) **2)
+  sy_train=sum((train$log.pm-mean(train$log.pm))**2)
+  r2train=1-s_train/sy_train
+  
+  # add SSE, trees, and training time to results
+  hyper_grid$RMSE[i]  <- sqrt(min(m$cv.error))
+  hyper_grid$trees[i] <- which.min(m$cv.error)
+  hyper_grid$time[i]  <- train_time[["elapsed"]]
+  hyper_grid$r2test[i]  <- r2test
+  hyper_grid$r2train[i]  <- r2train
+
+}
+```
+
+```{r}
+arrange(hyper_grid, r2test)
+```
+
+```{r}
+library(xtable)
+#xtable(hyper_grid)
+print(xtable(arrange(hyper_grid, r2test),digits=c(5,3,3,2,2,4,0,2)), include.rownames=FALSE)
+```
+
+```{r}
+plot
+```
+
+
+-----------------------------mf
+
+
+MODELO FINAL
+
+
+
+```{r}
+## 70% of the sample size
+smp_size <- floor(0.70 * nrow(tabla))
+
+## set the seed to make your partition reproducible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(tabla)), size = smp_size)
+
+train <- tabla[train_ind, ]
+test <- tabla[-train_ind, ]
+```
+
+```{r}
+best.gbm.fit <- gbm(
+  formula = formula_completa,
+  distribution = "gaussian",
+  data = train,
+  n.trees = 9910,
+  interaction.depth = 3, #profundidad de cada arbol
+  shrinkage = 0.01, #learning rate
+  cv.folds = 10, # cross validation
+  n.cores = NULL, # will use all cores by default
+  verbose = FALSE
+  )  
+
+# print results
+print(best.gbm.fit)
+```
+
+
+
+```{r}
+par(mar=c(3,14,1,1))
+summary(best.gbm.fit, las = 2)
+```
+
+
+TRAIN
+
+```{r}
+pred_train_best <- predict(best.gbm.fit , newdata=train, n.trees=9910)
+```
+
+
+```{r}
+resid_train_best=(pred_train_best-train$log.pm)
+```
+
+
+```{r}
+#Sum of Squared Errors
+SSE_train_best=sum((resid_train_best) **2)
+SSE_train_best
+```
+
+```{r}
+#Residual Standard error
+k=length(40)-1 #Resto 1 para ignorar beta_0???????
+n=nrow(train)
+sqrt(SSE_train_best/(n-(1+k)))
+```
+
+
+```{r}
+#R-Squared
+n=length(train$log.pm)
+SSyy_train_best=sum((train$log.pm-mean(train$log.pm))**2)
+1-SSE_train_best/SSyy_train_best
+```
+
+
+```{r}
+#Adjusted R-Squared
+1-SSE_train_best/SSyy_train_best*(n-1)/(n-(k+1))
+```
+
+```{r}
+jarqueberaTest(resid_train_best)
+```
+
+```{r}
+#Trained Model
+nb_train <- knn2nb(knearneigh(cbind(train$lon, train$lat), k=10))
+```
+
+
+```{r}
+attr(nb_train,"region.id") <- rownames(train)
+moran.test(x = resid_train_best, listw = nb2listw(nb_train, style="W"))
+moran.plot(x = resid_train_best, listw = nb2listw(nb_train, style="W"),main="Gráfico I Moran")
+moran.mc(resid_train_best, listw=nb2listw(nb_train, style="W"), nsim=100)
+```
+
+
+---------------------------------------
+TEST
+
+```{r}
+pred_test_best <- predict(best.gbm.fit , newdata=test, n.trees=9910)
+```
+
+
+```{r}
+resid_test_best=(pred_test_best-test$log.pm)
+```
+
+
+```{r}
+#Sum of Squared Errors
+SSE_test_best=sum((resid_test_best) **2)
+SSE_test_best
+```
+
+```{r}
+#Residual Standard error
+k=length(24)-1 #Resto 1 para ignorar beta_0
+n=nrow(test)
+sqrt(SSE_test_best/(n-(1+k)))
+```
+
+
+```{r}
+#R-Squared
+n=length(test$log.pm)
+SSyy_test_best=sum((test$log.pm-mean(test$log.pm))**2)
+1-SSE_test_best/SSyy_test_best
+```
+
+```{r}
+#Adjusted R-Squared
+1-(SSE_test_best/SSyy_test_best)*(n-1)/(n-(k+1))
+```
+
+```{r}
+jarqueberaTest(resid_test_best)
+```
+
+```{r}
+#Trained Model
+nb_test <- knn2nb(knearneigh(cbind(test$lon, test$lat), k=10))
+```
+
+
+```{r}
+attr(nb_test,"region.id") <- rownames(test)
+moran.test(x = resid_test_best, listw = nb2listw(nb_test, style="W"))
+moran.plot(x = resid_test_best, listw = nb2listw(nb_test, style="W"),main="Gráfico I Moran")
+moran.mc(resid_test_best, listw=nb2listw(nb_test, style="W"), nsim=100)
+```
+
+
+------------------------
+
+
+```{r}
+residuos_puros_test_df = as.data.frame(resid_test_best)
+```
+
+
+```{r}
+write.csv(residuos_puros_test_df,"gboost_residuos_puros.csv", row.names = FALSE)
+```
+```{r}
+#SatScan
+# LEER SHFILE
+source("FunctionsSatscan.R")
+#################
+Geo_MU <-readOGR(dsn="./2019_CP_Spain","Capa_CP_Poligonos")
+Geo_MU@data$C5<-(as.numeric(as.character(Geo_MU@data$MUNICODE)))
+Geo_MU   <- spTransform(Geo_MU, CRS("+proj=longlat +datum=WGS84"))
+Centroides<-as.data.frame(gPointOnSurface(Geo_MU, byid = T)@coords) 
+Geo_MU@data<-cbind(Geo_MU@data,Centroides)
+Geo_MU@data$ID1<-c(1:nrow(Geo_MU@data))
+Geo_CP<-Geo_MU
+```
+
+```{r}
+test_satscan_gboost <- tabla[-train_ind, ]
+
+test_satscan_gboost$response <- resid_test_best #residuos del modelo
+
+test_satscan_gboost$LAT_IND <- test_satscan_gboost$lat
+
+test_satscan_gboost$LONG_IND <- test_satscan_gboost$lon
+
+ak_gboost<-agreg(GEO =Geo_CP,pt = test_satscan_gboost,rr = 25,punto_raster = 0 )
+
+sk_gboost<-SatScanp(GEO =ak_gboost[[1]]@data,rates = 1,shape = 1,MT = 5,AT =1,reps=99  )
+```
+
+```{r}
+print(table(sk_gboost$gis$P_VALUE))
+```
+
+```{r}
+print_sk(xx = ak_gboost[[1]]@data,sk=sk_gboost,pv=0.2)
+print_sk(xx = ak_gboost[[1]]@data,sk=sk_gboost,pv=0.5)
+print_sk(xx = ak_gboost[[1]]@data,sk=sk_gboost,pv=1)
+```
+

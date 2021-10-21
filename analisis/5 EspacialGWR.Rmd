@@ -1,0 +1,308 @@
+---
+title: 'MÓDULO 5: Técnicas Avanzadas de Predicción'
+author: "Andrea Azabal Lamoso"
+date: "24/05/2021"
+output:
+  word_document:
+    toc: yes
+  html_document:
+    toc: yes
+    df_print: paged
+  pdf_document:
+    toc: yes
+subtitle: MODELOS LINEALES GENERALIZADOS
+---
+
+<style>
+body {
+text-align: justify}
+</style>
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy = TRUE)
+library(GWmodel)
+library(knitr)
+library(pander)
+library(kableExtra)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggcorrplot)
+suppressPackageStartupMessages(library(tidyverse))
+library(reticulate)
+require(effects)
+library(spatialreg)
+source("Functions_TFM.R")
+source("Functions.R")
+```
+
+
+```{r}
+pl_pt2<-function(df,size2,color2,dd=5,sz=500){
+  
+  volterars=0
+  volterarc=0
+  
+  if (!is.numeric(size2)) {  df$size<-as.numeric(as.factor(size2)) }
+  if (!is.numeric(color2)) { df$color<-as.numeric(as.factor(color2))}
+  if (is.numeric(size2)) {  df$size<-(size2) }
+  if (is.numeric(color2)) { df$color<-(color2)}
+  x<-dd 
+  dd<-seq(0,1,1/dd)
+  
+  if (volterars==1){      df$size<-(max(df$size)+1-df$size)    }
+  if (volterarc==1){      df$color<-(max(df$color)+1-df$color)    } 
+  
+  
+  if (length(unique(df$color))<10){    pal <- colorBin(palette = "RdYlBu", domain = df$color ,bins = length(levels(as.factor(df$color))) , na.color = "grey40", reverse = T) }
+  if (length(unique(df$color))>=10){   pal <- colorBin(palette = "RdYlBu", domain = df$color ,bins = unique(quantile(df$color, dd )), na.color = "grey40", reverse = T) }
+  
+  a<-as.character(cut(as.numeric(as.factor(df$size)),breaks=x))
+  a<-as.numeric(as.factor(a))
+  
+  
+   pintar<-leaflet() %>%
+    addTiles() %>%
+    addLegend(pal = pal, values = round(df$color, 1), position = "bottomright", title = "") %>%
+    addCircles(data=df,lng =df$lon ,lat =df$lat , stroke = FALSE, opacity = 0.5,fillOpacity = 0.5,
+               color =pal(df$color),radius=a*sz)
+  
+  return(pintar)
+  
+  
+  
+}
+```
+
+```{r}
+tabla_raw<-read.csv("tabla_raw.csv",sep=",",encoding="UTF-8")
+head(tabla_raw)
+
+```
+
+
+
+
+
+```{r}
+tabla <- pivot_wider(tabla_raw,
+            names_from = "distrito", 
+            values_from = 'distrito', 
+            values_fill = 0,
+            values_fn = function(x) 1)
+```
+
+
+```{r }
+formula_completa<-as.formula('log.pm~habitaciones+baths+terraza+ascensor+aire+garaje+piscina+trastero+armarios+reformar+exterior+balcon+duplex+estudio+piso+dens_cc+dens_hospital+log.dist_tp+dens_colegios+dist_centro+arganzuela+barajas+carabanchel+centro+chamartin+chamberi+ciudad_lineal+fuencarral+hortaleza+latina+moncloa+moratalaz+puente_de_vallecas+retiro+salamanca+san_blas+tetuan+usera+vicalvaro+villa_de_vallecas')
+```
+
+
+```{r}
+colnames(tabla) <- gsub("-","_", colnames(tabla))
+```
+
+
+```{r}
+glimpse(tabla)
+```
+
+
+
+```{r}
+## 70% of the sample size
+smp_size <- floor(0.70 * nrow(tabla))
+
+## set the seed to make your partition reproducible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(tabla)), size = smp_size)
+
+train <- tabla[train_ind, ]
+test <- tabla[-train_ind, ]
+```
+
+
+
+
+
+```{r warning=FALSE}
+#Convierto mi base de datos en base de datos espacial
+puntos_sp<-train
+coordinates(puntos_sp)<- c("lon","lat")
+proj4string(puntos_sp) <- CRS("+proj=longlat +datum=WGS84")
+#Obtenemos el mejor BW
+bw <- gwr.sel(formula=formula_completa, data=puntos_sp)
+
+paste("El mejor ancho de banda es:",bw)
+```
+
+```{r}
+bw
+```
+
+
+Una vez hemos determinado el ancho ideal, procedemos a estimar el modelo en el cual solo habrá un parámetro (*intercept*): 
+
+```{r warning=FALSE,message=FALSE}
+#Modelizamos los residuos con una constante
+g <- gwr(formula=formula_completa, data=puntos_sp, bandwidth=bw)
+```
+
+```{r}
+summary(g)
+```
+
+
+```{r}
+summary(g$SDF)
+```
+
+
+Representando gráficamente la variación de este parámetro:
+```{r results='asis', size="small",warning=FALSE,message=FALSE}
+train$intercept<-g$SDF$`localR2`
+train$registro<-1
+pl_pt2(train,color2 = train$intercept,size2 =train$registro ,dd = 6) 
+```
+
+
+
+```{r warning=FALSE,message=FALSE}
+#Test the model
+
+test1<-dplyr::select(test,log.pm,lat,lon,habitaciones,baths,terraza,ascensor,aire,garaje,piscina,trastero,armarios,reformar,exterior,balcon,duplex,estudio,piso,dens_cc,dens_hospital,log.dist_tp,dens_colegios,dist_centro,arganzuela,barajas,carabanchel,centro,chamartin,chamberi,ciudad_lineal,fuencarral,hortaleza,latina,moncloa,moratalaz,puente_de_vallecas,retiro,salamanca,san_blas,tetuan,usera,vicalvaro,villa_de_vallecas)
+
+#test1 <- dplyr::select(test, -id, -price, -precio.metro, -planta, -construccion, -metros, -exacta, -zonas.verdes, -buen.estado, -obra.nueva, -chalet, -atico, -calle, -dist_cc, -dist_hospital, -dist_tp, -dens_tp, -dist_colegios, -dist_centro, -log.dist_hospital, -log.dist_colegios, -distrito)
+puntos_sp_test<-test1
+coordinates(puntos_sp_test)<- c("lon","lat")
+proj4string(puntos_sp_test) <- CRS("+proj=longlat +datum=WGS84")
+
+
+g_test <- gwr.predict(formula=formula_completa, data = puntos_sp_test, bw=bw)
+summary(g_test$SDF)
+```
+
+
+```{r}
+g_test
+```
+
+
+
+```{r results='asis', size="small",warning=FALSE,message=FALSE}
+test$intercept<-g_test$SDF$Intercept_coef
+test$registro<-1
+pl_pt2(test,color2 = test$intercept,size2 =test$registro ,dd = 6) 
+```
+
+
+```{r}
+y_pred_gwr <- g_test$SDF$prediction
+```
+
+```{r}
+residuos_puros <- y_pred_gwr - test$log.pm
+```
+
+```{r results='asis', size="small",warning=FALSE,message=FALSE}
+test$intercept<-residuos_puros
+test$registro<-1
+pl_pt2(test,color2 = test$intercept,size2 =test$registro ,dd = 6) 
+```
+
+```{r}
+#Sum of Squared Errors
+SSE=sum((residuos_puros) **2)
+SSE
+```
+
+```{r}
+#Residual Standard error
+k=length(g$lm$coefficients)-1 #Resto 1 para ignorar beta_0
+n=length(y_pred_gwr)
+sqrt(SSE/(n-(1+k)))
+```
+
+
+```{r}
+#R-Squared
+n=length(test$log.pm)
+SSyy=sum((test$log.pm-mean(test$log.pm))**2)
+1-SSE/SSyy
+```
+
+
+```{r}
+#Adjusted R-Squared
+1-(SSE/SSyy)*(n-1)/(n-(k+1))
+```
+
+
+
+```{r}
+jarqueberaTest(residuos_puros)
+```
+
+```{r}
+nb_test <- knn2nb(knearneigh(cbind(test$lon, test$lat), k=10))
+attr(nb_test,"region.id") <- rownames(test)
+moran.test(x = residuos_puros, listw = nb2listw(nb_test, style="W"))
+moran.plot(x = residuos_puros, listw = nb2listw(nb_test, style="W"),main="Gráfico I Moran")
+```
+
+```{r}
+plot(scale(y_pred_gwr, center= T, scale= T), scale(residuos_puros, center= T, scale= T), xlab = "y_pred tipificada", ylab = "Residuos tipificados", main="Residuos vs. fit tipificados")
+```
+
+```{r}
+#q-qPlot
+qqnorm(residuos_puros, main="Normal Q-Q Plot (forward)")
+qqline(residuos_puros)
+```
+
+
+#SATSCAN:
+
+```{r}
+#SatScan
+# LEER SHFILE
+source("FunctionsSatscan.R")
+#################
+Geo_MU <-readOGR(dsn="./2019_CP_Spain","Capa_CP_Poligonos")
+Geo_MU@data$C5<-(as.numeric(as.character(Geo_MU@data$MUNICODE)))
+Geo_MU   <- spTransform(Geo_MU, CRS("+proj=longlat +datum=WGS84"))
+Centroides<-as.data.frame(gPointOnSurface(Geo_MU, byid = T)@coords) 
+Geo_MU@data<-cbind(Geo_MU@data,Centroides)
+Geo_MU@data$ID1<-c(1:nrow(Geo_MU@data))
+Geo_CP<-Geo_MU
+```
+
+```{r}
+test_satscan <- tabla[-train_ind, ]
+
+test_satscan$response <- residuos_puros #residuos del modelo
+
+test_satscan$LAT_IND <- test_satscan$lat
+
+test_satscan$LONG_IND <- test_satscan$lon
+
+ak_gwr<-agreg(GEO =Geo_CP,pt = test_satscan,rr = 25,punto_raster = 0 )
+
+sk_gwr<-SatScanp(GEO =ak_gwr[[1]]@data,rates = 1,shape = 1,MT = 5,AT =1,reps=99  )
+```
+
+```{r}
+ak_gwr[[1]]@data
+```
+
+
+```{r}
+print(table(sk_gwr$gis$P_VALUE))
+```
+
+```{r}
+print_sk(xx = ak_gwr[[1]]@data,sk=sk_gwr,pv=0.1)
+print_sk(xx = ak_gwr[[1]]@data,sk=sk_gwr,pv=0.5)
+print_sk(xx = ak_gwr[[1]]@data,sk=sk_gwr,pv=1)
+```

@@ -1,0 +1,334 @@
+#######################################################################################################
+###############################   TFM   ###############################################
+#######################################################################################################
+#######################################################################################################
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyr)
+library(pander)
+require(lattice)
+require(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(MASS)
+source("Functions_TFM.R")
+source("Functions.R")
+```
+
+
+
+```{r}
+tabla<-read.csv("tabla_raw.csv",sep=",",encoding="UTF-8")
+head(tabla)
+
+
+tabla <- tabla %>%
+  mutate(habitaculos=habitaciones+baths)
+
+```
+
+
+```{r}
+nb <- knn2nb(knearneigh(cbind(tabla$lon, tabla$lat), k=10))
+```
+
+
+```{r }
+#Elimino id, price, lon, lat, precio.metro, construccion, metros, exacta, zonas verdes, buen estado, obra nueva, atico, calle, dist_cc, dist_hospital, denst_tp, dist_colegios
+
+formula_2<-as.formula('log.pm~habitaciones+baths+terraza+ascensor+aire+garaje+piscina+trastero+armarios+reformar+exterior+balcon+duplex+estudio+piso+distrito+dens_cc+dens_hospital+log.dist_tp+dens_colegios+dist_centro')
+
+```
+
+######################
+# GLM CON DISTANCIAS
+######################
+
+```{r}
+modelo_completo2<-lm(formula = formula_2, data = tabla)
+modelo_vacio<-lm(formula =log.pm~1, data = tabla)
+```
+
+--------------------
+
+```{r}
+summary(modelo_completo2)
+```
+
+- Residuos normales:
+
+```{r}
+plot(modelo_completo2,2)
+```
+
+
+```{r}
+jarqueberaTest(modelo_completo2$resid)
+```
+
+No son normales
+
+
+- autocorrelacionados mediante el test de *Durbin Watson*:
+
+```{r}
+dwtest(modelo_completo2)
+```
+
+
+Hay correlacion
+
+- homocedásticos mediante el test de *Breusch Pagan*:
+
+```{r }
+bptest(modelo_completo2)
+```
+
+
+Hay heterocedasticidad
+
+
+
+```{r warning=FALSE,message=FALSE}
+moran.test(x = modelo_completo2$resid, listw = nb2listw(nb, style="W"))
+moran.plot(x = modelo_completo2$resid, listw = nb2listw(nb, style="W"),main="Gráfico I Moran")
+```
+
+
+#TEST 70% 30%
+```{r}
+## 70% of the sample size
+smp_size <- floor(0.70 * nrow(tabla))
+
+## set the seed to make your partition reproducible
+set.seed(0)
+train_ind <- sample(seq_len(nrow(tabla)), size = smp_size)
+
+train <- tabla[train_ind, ]
+test <- tabla[-train_ind, ]
+```
+
+############
+#ENTRAMIENTO
+#############
+
+```{r}
+modelo_completo2_trained<-lm(formula = formula_2, data = train)
+summary(modelo_completo2_trained)
+```
+
+
+#############
+# EVALUACIÓN TRAIN
+##############
+```{r}
+y_pred_train <- predict(modelo_completo2_trained, train, type="response")
+#Sum of Squared Errors
+residuos_train <- y_pred_train - train$log.pm
+```
+
+##############
+#Adjusted R-Squared
+```{r}
+SSE_train=sum((residuos_train) **2)
+
+#Residual Standard error
+k=length(modelo_completo2_trained$coefficients)-1 #Resto 1 para ignorar beta_0
+n_train=length(y_pred_train)
+SSyy_train=sum((train$log.pm-mean(train$log.pm))**2)
+
+#Adjusted R-Squared
+r2_adjusted <- 1-(SSE_train/SSyy_train)*(n_train-1)/(n_train-(k+1))
+
+print(r2_adjusted)
+```
+
+#################
+#Jarque Bera
+```{r}
+jarqueberaTest(residuos_train, robust=TRUE)
+```
+
+```{r}
+plot(y_pred_train, residuos_train)
+```
+
+```{r}
+bptest(modelo_completo2_trained)
+```
+
+```{r}
+bptest(formula = formula_2, data = train)
+```
+
+
+##################
+#I moran
+```{r}
+nb_train <- knn2nb(knearneigh(cbind(train$lon, train$lat), k=10))
+attr(nb_train,"region.id") <- rownames(train)
+moran.test(x = residuos_train, listw = nb2listw(nb_train, style="W"))
+moran.plot(x = residuos_train, listw = nb2listw(nb_train, style="W"),main="Gráfico I Moran")
+```
+
+
+#############
+# EVALUACIÓN TEST
+##############
+```{r}
+y_pred_test <- predict(modelo_completo2_trained, test, type="response")
+#Sum of Squared Errors
+residuos_test <- y_pred_test - test$log.pm
+```
+
+##############
+#Adjusted R-Squared
+```{r}
+SSE_test=sum((residuos_test) **2)
+
+#Residual Standard error
+k=length(modelo_completo2_trained$coefficients)-1 #Resto 1 para ignorar beta_0
+n_test=length(y_pred_test)
+SSyy_test=sum((test$log.pm-mean(test$log.pm))**2)
+
+#Adjusted R-Squared
+r2_adjusted <- 1-(SSE_test/SSyy_test)*(n_test-1)/(n_test-(k+1))
+
+print(r2_adjusted)
+```
+
+#################
+#Jarque Bera
+```{r}
+jarqueberaTest(residuos_test)
+```
+
+```{r}
+shapiro.test(residuos_test)
+```
+
+```{r}
+ks.test(residuos_test, "pnorm", mean=mean(residuos_test), sd=sd(residuos_test))
+```
+
+```{r}
+library(moments)
+agostino.test(residuos_test)
+```
+
+```{r}
+kurtosis.norm.test(residuos_test)
+```
+
+
+```{r}
+ad.test(residuos_test)
+```
+
+```{r}
+library(normtest) ###REALIZA 5 PRUEBAS DE NORMALIDAD###
+library(nortest) ###REALIZA 10 PRUEBAS DE NORMALIDAD###
+library(moments)
+jb.norm.test(residuos_test)
+```
+
+```{r}
+cvm.test(residuos_test)
+```
+```{r}
+lillie.test(residuos_test)
+```
+
+
+
+
+```{r}
+plotn <- function(x,main="Histograma de frecuencias \ny distribución normal",
+                  xlab="X",ylab="Densidad") {
+                  min <- min(x)
+                  max <- max(x)
+                  media <- mean(x)
+                  dt <- sd(x)
+                  hist(x,freq=F,main=main,xlab=xlab,ylab=ylab)
+                  curve(dnorm(x,media,dt), min, max,add = T,col="blue")
+                }
+ 
+plotn(residuos_test,main="Distribución normal")#Grafico de x
+```
+
+
+```{r}
+plot(y_pred_test, residuos_test)
+```
+```{r}
+plot(modelo_completo2_trained,2)
+```
+
+##################
+#I moran
+```{r}
+nb_test <- knn2nb(knearneigh(cbind(test$lon, test$lat), k=10))
+attr(nb_test,"region.id") <- rownames(test)
+moran.test(x = residuos_test, listw = nb2listw(nb_test, style="W"))
+moran.plot(x = residuos_test, listw = nb2listw(nb_test, style="W"),main="Gráfico I Moran")
+```
+
+
+#########################
+GUARDAR LOS RESIDUOS PARA EL SATSCAN
+#########################
+
+```{r}
+residuos_puros_test_df = as.data.frame(residuos_test)
+```
+
+```{r}
+write.csv(residuos_puros_test_df,"glm_con_distancias_residuos_test.csv", row.names = FALSE)
+```
+
+#####################################################################################
+
+
+```{r}
+# LEER SHFILE
+source("FunctionsSatscan.R")
+#################
+Geo_MU <-readOGR(dsn="./2019_CP_Spain","Capa_CP_Poligonos")
+Geo_MU@data$C5<-(as.numeric(as.character(Geo_MU@data$MUNICODE)))
+Geo_MU   <- spTransform(Geo_MU, CRS("+proj=longlat +datum=WGS84"))
+Centroides<-as.data.frame(gPointOnSurface(Geo_MU, byid = T)@coords) 
+Geo_MU@data<-cbind(Geo_MU@data,Centroides)
+Geo_MU@data$ID1<-c(1:nrow(Geo_MU@data))
+Geo_CP<-Geo_MU
+```
+
+```{r}
+test_satscan <- tabla[-train_ind, ]
+
+test_satscan$response <- residuos_puros_test_df$residuos_test #residuos del SAR con el set de test
+
+test_satscan$LAT_IND <- test_satscan$lat
+
+test_satscan$LONG_IND <- test_satscan$lon
+
+ak<-agreg(GEO =Geo_CP,pt = test_satscan,rr = 25,punto_raster = 0 )
+
+sk<-SatScanp(GEO =ak[[1]]@data,rates = 1,shape = 1,MT = 5,AT =1,reps=99  )
+```
+
+
+
+
+```{r}
+print(table(sk$gis$P_VALUE))
+```
+
+
+```{r}
+print_sk(xx = ak[[1]]@data,sk=sk,pv=0.1)
+print_sk(xx = ak[[1]]@data,sk=sk,pv=0.5)
+print_sk(xx = ak[[1]]@data,sk=sk,pv=1)
+```
+

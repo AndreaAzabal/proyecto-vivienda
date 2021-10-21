@@ -1,0 +1,313 @@
+---
+title: 'MÓDULO 5: Técnicas Avanzadas de Predicción'
+author: "Andrea Azabal Lamoso"
+date: "24/05/2021"
+output:
+  word_document:
+    toc: yes
+  html_document:
+    toc: yes
+    df_print: paged
+  pdf_document:
+    toc: yes
+subtitle: MODELOS LINEALES GENERALIZADOS
+---
+
+<style>
+body {
+text-align: justify}
+</style>
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy = TRUE)
+library(knitr)
+library(pander)
+library(kableExtra)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggcorrplot)
+suppressPackageStartupMessages(library(tidyverse))
+library(reticulate)
+require(effects)
+library(spatialreg)
+source("Functions_TFM.R")
+source("Functions.R")
+```
+
+
+```{r}
+tabla_raw<-read.csv("tabla_raw.csv",sep=",",encoding="UTF-8")
+
+## set the seed to make your partition reproducible
+#set.seed(0)
+#tabla_ind <- sample(seq_len(nrow(tabla_raw)), size = 1000)#QUITAR ESTA MIERDA
+#tabla_raw <- tabla_raw[tabla_ind, ]
+
+print(nrow(tabla_raw))
+
+
+head(tabla_raw)
+```
+
+```{r}
+tabla <- pivot_wider(tabla_raw,
+            names_from = "distrito", 
+            values_from = 'distrito', 
+            values_fill = 0,
+            values_fn = function(x) 1)
+```
+
+
+```{r }
+formula_completa<-as.formula('log.pm~habitaciones+baths+terraza+ascensor+aire+garaje+piscina+trastero+armarios+reformar+exterior+balcon+duplex+estudio+piso+dens_cc+dens_hospital+log.dist_tp+dens_colegios+dist_centro+arganzuela+barajas+carabanchel+centro+chamartin+chamberi+ciudad_lineal+fuencarral+hortaleza+latina+moncloa+moratalaz+puente_de_vallecas+retiro+salamanca+san_blas+tetuan+usera+vicalvaro+villa_de_vallecas')
+```
+
+
+```{r}
+colnames(tabla) <- gsub("-","_", colnames(tabla))
+```
+
+
+```{r}
+glimpse(tabla)
+```
+
+
+
+TEST 70% 30%:
+
+```{r}
+## 70% of the sample size
+smp_size <- floor(0.70 * nrow(tabla))
+
+## set the seed to make your partition reproducible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(tabla)), size = smp_size)
+
+
+train <- tabla[train_ind, ]
+test <- tabla[-train_ind, ]
+```
+
+```{r}
+#Trained Model
+nb_train <- knn2nb(knearneigh(cbind(train$lon, train$lat), k=10))
+modelo_espacial_sem_trained <- errorsarlm(formula = formula_completa, data=train, listw = nb2listw(nb_train, style="W"))
+summary(modelo_espacial_sem_trained)
+```
+
+
+```{r warning=FALSE, error=FALSE, message=FALSE}
+summary(modelo_espacial_sem_trained)
+```
+```{r}
+modelo_espacial_sem_trained$lambda
+```
+
+```{r}
+modelo_espacial_sem_trained$lambda.se
+```
+
+#########################
+EVALUACIÓN TRAIN
+#########################
+
+```{r}
+#Test the model
+y_pred_train <- predict.sarlm(modelo_espacial_sem_trained, train, type="response", listw = nb2listw(nb_train, style="W"))
+```
+
+```{r}
+residuos_train <- train$log.pm - as.data.frame(y_pred_train)$fit
+residuos_puros_train = as.numeric((as.matrix(diag(nrow(train))) - as.numeric(modelo_espacial_sem_trained$lambda * nb2mat(nb_train))) %*% residuos_train)
+```
+######################
+#Adjusted R-Squared
+
+```{r}
+#Sum of Squared Errors
+SSE_train=sum(residuos_puros_train**2)
+
+k=length(modelo_espacial_sem_trained$coefficients)-1 #Resto 1 para ignorar beta_0
+n_train=length(train$log.pm)
+
+SSyy_train=sum((train$log.pm-mean(train$log.pm))**2)
+
+#Adjusted R-Squared
+r2_ajusted_train = 1-(SSE_train/SSyy_train)*(n_train-1)/(n_train-(k+1))
+
+print(r2_ajusted_train)
+```
+######################
+#QQ
+
+```{r}
+#q-qPlot
+qqnorm(residuos_puros_train, main="Q-Q Plot")
+qqline(residuos_puros_train)
+```
+
+
+######################
+#Jarque Bera
+
+```{r}
+jarqueberaTest(residuos_puros_train)
+```
+
+######################
+#I moran
+
+```{r}
+moran.test(x = residuos_puros_train, listw = nb2listw(nb_train, style="W"))
+moran.plot(x = residuos_puros_train, listw = nb2listw(nb_train, style="W"),main="Gráfico I Moran")
+```
+
+
+
+
+#########################
+EVALUACIÓN TEST
+#########################
+
+```{r}
+#Test the model
+nb_test <- knn2nb(knearneigh(cbind(test$lon, test$lat), k=10))
+attr(nb_test,"region.id") <- rownames(test)
+y_pred_test <- predict.sarlm(modelo_espacial_sem_trained, test, type="response", listw = nb2listw(nb_test, style="W"))
+```
+
+```{r}
+residuos_test <- test$log.pm - as.data.frame(y_pred_test)$fit
+residuos_puros_test = as.numeric((as.matrix(diag(nrow(test))) - as.numeric(modelo_espacial_sem_trained$lambda * nb2mat(nb_test))) %*% residuos_test)
+```
+######################
+#Adjusted R-Squared
+
+```{r}
+#Sum of Squared Errors
+SSE_test=sum(residuos_puros_test**2)
+
+k_test=length(modelo_espacial_sem_trained$coefficients)-1 #Resto 1 para ignorar beta_0
+n_test=length(test$log.pm)
+
+SSyy_test=sum((test$log.pm-mean(test$log.pm))**2)
+
+#Adjusted R-Squared
+r2_ajusted_test = 1-(SSE_test/SSyy_test)*(n_test-1)/(n_test-(k_test+1))
+
+print(r2_ajusted_test)
+```
+
+######################
+#QQ
+
+```{r}
+#q-qPlot
+qqnorm(residuos_puros_test, main="Q-Q Plot")
+qqline(residuos_puros_test)
+```
+
+######################
+#Jarque Bera
+
+```{r}
+jarqueberaTest(residuos_puros_test)
+```
+
+```{r}
+plot(scale(as.data.frame(y_pred_test)$fit, center= T, scale= T), scale(residuos_puros_test, center= T, scale= T), xlab = "y_pred tipificada", ylab = "Residuos tipificados", main="Residuos vs. fit tipificados")
+```
+
+######################
+#I moran
+
+```{r}
+moran.test(x = residuos_puros_test, listw = nb2listw(nb_test, style="W"))
+moran.plot(x = residuos_puros_test, listw = nb2listw(nb_test, style="W"),main="Gráfico I Moran")
+```
+#########################
+GUARDAR LOS RESIDUOS PARA EL SATSCAN
+#########################
+
+
+```{r}
+sem_residuos_puros_multiplicados = as.data.frame(residuos_puros_test)
+residuos_test_df = as.data.frame(residuos_test)
+```
+
+
+```{r}
+write.csv(sem_residuos_puros_multiplicados,"sem_residuos_puros_multiplicados.csv", row.names = FALSE)
+write.csv(residuos_test_df,"sem_residuos_puros.csv", row.names = FALSE)
+```
+
+#SATSCAN
+
+```{r}
+#SatScan
+# LEER SHFILE
+source("FunctionsSatscan.R")
+#################
+Geo_MU <-readOGR(dsn="./2019_CP_Spain","Capa_CP_Poligonos")
+Geo_MU@data$C5<-(as.numeric(as.character(Geo_MU@data$MUNICODE)))
+Geo_MU   <- spTransform(Geo_MU, CRS("+proj=longlat +datum=WGS84"))
+Centroides<-as.data.frame(gPointOnSurface(Geo_MU, byid = T)@coords) 
+Geo_MU@data<-cbind(Geo_MU@data,Centroides)
+Geo_MU@data$ID1<-c(1:nrow(Geo_MU@data))
+Geo_CP<-Geo_MU
+```
+
+#Con residuos puros:
+
+```{r}
+test_satscan_sem <- tabla[-train_ind, ]
+
+test_satscan_sem$response <- residuos_puros_test #residuos del modelo
+
+test_satscan_sem$LAT_IND <- test_satscan_sem$lat
+
+test_satscan_sem$LONG_IND <- test_satscan_sem$lon
+
+ak_sem<-agreg(GEO =Geo_CP,pt = test_satscan_sem,rr = 25,punto_raster = 0 )
+
+sk_sem<-SatScanp(GEO =ak_sem[[1]]@data,rates = 1,shape = 1,MT = 5,AT =1,reps=99  )
+```
+
+```{r}
+print(table(sk_sem$gis$P_VALUE))
+```
+
+```{r}
+print_sk(xx = ak_sem[[1]]@data,sk=sk_sem,pv=0.1)
+print_sk(xx = ak_sem[[1]]@data,sk=sk_sem,pv=0.5)
+print_sk(xx = ak_sem[[1]]@data,sk=sk_sem,pv=1)
+```
+
+#Con residuos simples:
+
+```{r}
+test_satscan_sem_1 <- tabla[-train_ind, ]
+
+test_satscan_sem_1$response <- residuos_test #residuos del modelo
+
+test_satscan_sem_1$LAT_IND <- test_satscan_sem_1$lat
+
+test_satscan_sem_1$LONG_IND <- test_satscan_sem_1$lon
+
+ak_sem_1<-agreg(GEO =Geo_CP,pt = test_satscan_sem_1,rr = 25,punto_raster = 0 )
+
+sk_sem_1<-SatScanp(GEO =ak_sem_1[[1]]@data,rates = 1,shape = 1,MT = 5,AT =1,reps=99  )
+```
+
+```{r}
+print(table(sk_sem_1$gis$P_VALUE))
+```
+
+```{r}
+print_sk(xx = ak_sem_1[[1]]@data,sk=sk_sem_1,pv=0.1)
+print_sk(xx = ak_sem_1[[1]]@data,sk=sk_sem_1,pv=0.5)
+print_sk(xx = ak_sem_1[[1]]@data,sk=sk_sem_1,pv=1)
+```
