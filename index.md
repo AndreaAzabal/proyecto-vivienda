@@ -157,17 +157,16 @@ Al combinar *weak learners* de forma iterativa, el objetivo es que el algoritmo 
 
 Al contrario de los modelos propuestos hasta ahora, el método de GB se trata de una técnica no interpretable, que además requiere de un gran esfuerzo en la parametrización o *fine-tunning*, de manera que no se caiga en un sobreajuste al conjunto de datos.
 
-# Header 1
-## Header 2
-### Header 3
+## Comparativa entre modelos
 
-- Bulleted
-- List
+Como puede observarse, todos los modelos poseen un coeficiente de determinación ajustado superior al $\bar{R}^2>75\%$ sobre una base de datos de prueba, por lo que todos ellos proporcionan una explicación lo suficientemente buena de la variabilidad de la variable dependiente.
 
-1. Numbered
-2. List
+![Comparativa](https://github.com/AndreaAzabal/proyecto-vivienda/blob/gh-pages/images/R_2_por_modelo.PNG)
 
-**Bold** and _Italic_ and `Code` text
+En lo referente al poder predictivo de cada uno de ellos, es necesario diferenciar el modelo de *Machine Learning*, *Gradient Boost*, por tratarse de un algoritmo no interpretable. Así, si bien es el que mejores predicciones arroja de todos los modelos implementados, no tenemos conocimiento de cómo está contribuyendo cada variable, es decir, no se conoce el efecto marginal de cada atributo al precio final de la vivienda. En este sentido, se trata de una ''caja negra'' que puede no ser del todo conveniente si lo que se busca es entender cómo se ve afectado el valor de un inmueble en función de sus características. 
 
-[Link](url) and ![Image](src)
-```
+De entre las modelizaciones restantes, las cuales sí son interpretables, aquellas con mayor capacidad predictiva son, como era de esperar tras haber estudiado sus residuos, el modelo de retardo espacial y el modelo de error espacial. Estos algoritmos sí que permiten conocer cómo afecta la variación de una variable independiente al resultado final, por lo que son una elección acertada en las situaciones en las que se requiera considerar este tipo de impacto sobre el precio de la vivienda.
+
+Por otra parte, es útil considerar la información recopilada en el cuadro \ref{tab:resultados_satscan_global}, en el cual se muestran los resultados del análisis estadístico espacial realizado mediante la herramienta \textit{SatScan}. Conociéndose el número de \textit{clusters} con p-value inferior al 10\%, así como el porcentaje de población que estos representan y su distribución en el espacio, podremos discernir las zonas problemáticas para cada modelo. De esta forma, por ejemplo, para los modelos interpretables SAR y SEM se tiene que el centro de Madrid es probablemente más propenso a arrojar errores en la predicción, si bien el porcentaje total de la población que representan es bastante bajo ($<5\%)$. En contraposición, el modelo no interpretable GB es menos fiable al sur y este de la ciudad, comprendiendo en este caso más del doble de observaciones con respecto al SAR y SEM (casi un 10\%).
+
+
