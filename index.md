@@ -21,48 +21,146 @@ La ciudad de Madrid es, sin duda, una de las que más variabilidad presenta en e
 
 ## Base de datos
 
-La extracción de la información del portal inmobiliario [Idealista](https://www.idealista.com/) se ha llevado a cabo mediante un método de *web scraping* en el que se ha barrido cada uno de los 21 distritos de la ciudad de Madrid, de manera que se ha obtenido un total de 5935 observaciones.
+La extracción de la información del portal inmobiliario [Idealista](https://www.idealista.com/) se ha llevado a cabo mediante un método de *web scraping* en el que se ha barrido cada uno de los 21 distritos de la ciudad de Madrid, de manera que se ha obtenido un total de 5935 observaciones (consultar el fichero de [recopilación de inmuebles](https://github.com/AndreaAzabal/proyecto-vivienda/blob/main/procesoExtraccionIdealista/Idealista.R) y [extracción de características](https://github.com/AndreaAzabal/proyecto-vivienda/blob/main/procesoParseadoIdealista/main.py)).
 
-Asimismo, en la gráfica se puede conocer la distribución del precio de mercado por metro cuadrado de los inmuebles en los diferentes distritos. Como se puede observar, hay una diferencia del 380% entre el barrio más caro, el de Salamanca, y el más barato, Villaverde. La variabilidad puede observarse en el mapa de la figura.
+A partir de esta información, se puede conocer la distribución del precio de mercado por metro cuadrado de los inmuebles en los diferentes distritos. Como se puede observar, hay una diferencia del 380% entre el barrio más caro, el de Salamanca, y el más barato, Villaverde. La variabilidad puede observarse en el mapa de la figura.
 
 ![Precio metro por distrito](/images/precio_metro_por_distrito.PNG)
 
 Por otra parte, vamos a valernos del proyecto colaborativo [OpenStreetMap](https://www.openstreetmap.org/) para descargar información geográfica relevante (colegios, hospitales, etc.). La situación de los puntos de interés será incluida en nuestro conjunto de datos, permitiéndonos ponderar cada observación en relación a su proximidad a dichas localizaciones.
+
+Para descargar polígonos se crea la siguiente función:
+
+```{r}
+Descarga_OSM<-function(ciudad,key,value){
+  
+    #Descargo la Iformación
+  mapa1 <- opq(bbox = ciudad)
+  Poligonos_dentro <- add_osm_feature(mapa1, key = key, value = value)
+  df <- osmdata_sp(Poligonos_dentro)
+  #Centroides de cada polígono + representación
+  spChFIDs(df$osm_polygons) <- 1:nrow(df$osm_polygons@data)
+  centroides <- gCentroid(df$osm_polygons, byid = TRUE)
+  names<-df$osm_polygons$name
+  
+  #Creo los Buffers de Hospitales. En menos de 200 metros. 
+  buffer <- gBuffer(centroides, byid = TRUE, width = 0.002)
+  
+  #Convierto en Spatial Polygon DataFrame
+  buffer <- SpatialPolygonsDataFrame(buffer, data.frame(row.names = names(buffer), n = 1:length(buffer)))
+  #Combino los Polígonos que se entrecruzan
+  gt <- gIntersects(buffer, byid = TRUE, returnDense = FALSE)
+  ut <- unique(gt); nth <- 1:length(ut); buffer$n <- 1:nrow(buffer); buffer$nth <- NA
+  for(i in 1:length(ut)){
+    x <- ut[[i]];  buffer$nth[x] <- i}
+  buffdis <- gUnaryUnion(buffer, buffer$nth)
+  
+  #Combino los Polígonos que se entrecruzan otra vez.
+  gt <- gIntersects(buffdis, byid = TRUE, returnDense = FALSE)
+  ut <- unique(gt); nth <- 1:length(ut)
+  buffdis <- SpatialPolygonsDataFrame(buffdis, data.frame(row.names = names(buffdis), n = 1:length(buffdis)))
+  buffdis$nth <- NA
+  for(i in 1:length(ut)){
+    x <- ut[[i]];  buffdis$nth[x] <- i}
+  buffdis <- gUnaryUnion(buffdis, buffdis$nth)
+  
+  sd<-list(centroides,buffdis,names)
+  
+  return(sd)
+  
+}
+```
+Para descargar puntos se crea la siguiente función:
+
+```{r}
+Descarga_OSM_points<-function(ciudad,key,value){
+  q <- getbb(ciudad) %>%
+      opq() %>%
+       add_osm_feature(key, value)
+  return(osmdata_sf(q))
+}
+mapa1 <- opq(bbox = "Madrid, Spain")
+```
 
 A continuación se incluyen las visualizaciones de los datos descargados, así como las variables calculadas a partir de los mismos:
 
 
 - Hospitales
 
-La información se ha descargado mediante una búsqueda con *key = 'amenity'* y *value = "hospital"*:
+```{r}
+Hospitales<-Descarga_OSM(ciudad="Madrid",key='amenity',value = "hospital")
+```
 
 ![Mapa de hospitales](/images/mapa_hospitales.PNG)
 
 A partir de esta información se ha calculado la densidad de hospitales en un radio de 1km para cada vivienda.
 
+```{r}
+#Hospitales
+coordenadas<-as.data.frame(gCentroid(Hospitales[[2]], byid=TRUE)@coords)
+Distancias<-distm(cbind(tabla$lon,tabla$lat),cbind(coordenadas$x,coordenadas$y),fun = distCosine )/1000
+tabla$dist_hospital<-round(apply(Distancias,1,min),4)
+tabla$dens_hospital<-apply((Distancias<1)*1,1,sum)
+```
+
 - Centros comerciales
 
-La información se ha descargado mediante una búsqueda con *key = 'shop'* y *value = "mall"*:
+```{r}
+CentrosComerciales<-Descarga_OSM(ciudad="Madrid, Spain",key='shop',value = "mall")
+```
 
 ![Mapa de centros comerciales](/images/mapa_cc.PNG)
 
 A partir de esta información se ha calculado la densidad de centros comerciales en un radio de 1km para cada vivienda.
 
+
+```{r}
+#CC
+coordenadas<-as.data.frame(gCentroid(CentrosComerciales[[2]], byid=TRUE)@coords)
+Distancias<-distm(cbind(tabla$lon,tabla$lat),cbind(coordenadas$x,coordenadas$y),fun = distCosine )/1000
+tabla$dist_cc<-round(apply(Distancias,1,min),2)
+tabla$dens_cc<-apply((Distancias<1)*1,1,sum)
+```
+
 - Transporte público
 
-La información se ha descargado mediante una búsqueda con *key = 'public\_transport'* y *value = "station"*:
+
+```{r, fig.heigth=20}
+Metro<-Descarga_OSM_points(ciudad="Madrid", key='public_transport', value = "station")
+```
 
 ![Mapa de transporte publico](/images/mapa_tp.PNG)
 
 A partir de esta información se ha calculado la distancia más cercana a una estación de metro o de cercanías RENFE para cada vivienda.
 
+```{r}
+#Metro
+#coordenadas<-as.data.frame(gCentroid(Hospitales[[2]], byid=TRUE)@coords)
+Distancias<-distm(cbind(tabla$lon,tabla$lat),cbind(coords_metro$lon,coords_metro$lat),fun = distCosine )/1000
+tabla$dist_tp<-round(apply(Distancias,1,min),4)
+tabla$dens_tp<-apply((Distancias<1)*1,1,sum)
+```
+
 - Colegios
 
-La información se ha descargado mediante una búsqueda con *key = 'amenity'* y *value = "school"*:
+```{r}
+Colegios<-Descarga_OSM(ciudad="Madrid, Spain",key='amenity',value = "school")
+```
 
 ![Mapa de colegios](/images/mapa_colegios.PNG)
 
 A partir de esta información se ha calculado la densidad de colegios en un radio de 1km para cada vivienda.
+
+```{r}
+#Colegios
+coordenadas<-as.data.frame(gCentroid(Colegios[[2]], byid=TRUE)@coords)
+Distancias<-distm(cbind(tabla$lon,tabla$lat),cbind(coordenadas$x,coordenadas$y),fun = distCosine )/1000
+tabla$dist_colegios<-round(apply(Distancias,1,min),4)
+tabla$dens_colegios<-apply((Distancias<1)*1,1,sum)
+head(tabla)
+```
+
+El código completo puede consultarse en [este fichero](https://github.com/AndreaAzabal/proyecto-vivienda/blob/main/analisis/1%20Variables.Rmd), en el cual también se ha llevado a cabo la limpieza y preparación de la base de datos.
 
 ## Hipótesis previas
 
@@ -185,7 +283,9 @@ A la hora de evaluar cada modelo y determinar su bondad de ajuste, vamos a apoya
 
 ## Comparativa entre modelos
 
-Como puede observarse, todos los modelos poseen un coeficiente de determinación ajustado superior al 75% sobre una base de datos de prueba, por lo que todos ellos proporcionan una explicación lo suficientemente buena de la variabilidad de la variable dependiente.
+En [esta carpeta](https://github.com/AndreaAzabal/proyecto-vivienda/tree/main/analisis) se ha recopilado todo el código utilizado para el análisis y obtención de resultados de los distintos modelos. Para más información, puede contultarse el fichero [Readme](https://github.com/AndreaAzabal/proyecto-vivienda/blob/main/README.md).
+
+Como puede observarse a continuación, todos los modelos poseen un coeficiente de determinación ajustado superior al 75% sobre una base de datos de prueba, por lo que todos ellos proporcionan una explicación lo suficientemente buena de la variabilidad de la variable dependiente.
 
 ![Comparativa_R2](/images/R_2_por_modelo.PNG)
 
