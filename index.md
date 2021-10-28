@@ -25,7 +25,7 @@ La extracción de la información del portal inmobiliario [Idealista](https://ww
 
 Asimismo, en la gráfica se puede conocer la distribución del precio de mercado por metro cuadrado de los inmuebles en los diferentes distritos. Como se puede observar, hay una diferencia del 380% entre el barrio más caro, el de Salamanca, y el más barato, Villaverde. La variabilidad puede observarse en el mapa de la figura.
 
-![Precio metro por distrito](https://github.com/AndreaAzabal/proyecto-vivienda/blob/gh-pages/images/precio_metro_por_distrito.PNG)
+![Precio metro por distrito](/images/precio_metro_por_distrito.PNG)
 
 Por otra parte, vamos a valernos del proyecto colaborativo [OpenStreetMap](https://www.openstreetmap.org/) para descargar información geográfica relevante (colegios, hospitales, etc.). La situación de los puntos de interés será incluida en nuestro conjunto de datos, permitiéndonos ponderar cada observación en relación a su proximidad a dichas localizaciones.
 
@@ -44,7 +44,7 @@ A partir de esta información se ha calculado la densidad de hospitales en un ra
 
 La información se ha descargado mediante una búsqueda con *key = 'shop'* y *value = "mall"*:
 
-![Mapa de centros comerciales](https://github.com/AndreaAzabal/proyecto-vivienda/blob/gh-pages/images/mapa_cc.PNG)
+![Mapa de centros comerciales](/images/mapa_cc.PNG)
 
 A partir de esta información se ha calculado la densidad de centros comerciales en un radio de 1km para cada vivienda.
 
@@ -52,7 +52,7 @@ A partir de esta información se ha calculado la densidad de centros comerciales
 
 La información se ha descargado mediante una búsqueda con *key = 'public\_transport'* y *value = "station"*:
 
-![Mapa de transporte publico](https://github.com/AndreaAzabal/proyecto-vivienda/blob/gh-pages/images/mapa_tp.PNG)
+![Mapa de transporte publico](/images/mapa_tp.PNG)
 
 A partir de esta información se ha calculado la distancia más cercana a una estación de metro o de cercanías RENFE para cada vivienda.
 
@@ -60,7 +60,7 @@ A partir de esta información se ha calculado la distancia más cercana a una es
 
 La información se ha descargado mediante una búsqueda con *key = 'amenity'* y *value = "school"*:
 
-![Mapa de colegios](https://github.com/AndreaAzabal/proyecto-vivienda/blob/gh-pages/images/mapa_colegios.PNG)
+![Mapa de colegios](/images/mapa_colegios.PNG)
 
 A partir de esta información se ha calculado la densidad de colegios en un radio de 1km para cada vivienda.
 
@@ -151,22 +151,71 @@ Así, conseguimos reducir la dependencia espacial de los residuos del modelo, au
 
 ### Gradient Boosting (GB)
 
-El método de \textit{Gradient Boosting} es una técnica de aprendizaje automático o *Machine Learning* que genera un modelo predictivo a partir de un conjunto de algoritmos de predicción débiles, típicamente árboles de decisión. 
+El método de *Gradient Boosting* es una técnica de aprendizaje automático o *Machine Learning* que genera un modelo predictivo a partir de un conjunto de algoritmos de predicción débiles, típicamente árboles de decisión. 
 
 Al combinar *weak learners* de forma iterativa, el objetivo es que el algoritmo  F aprenda a predecir valores minimizando el error cuadrático medio. De esta manera, en cada iteración el árbol de decisión se centra en disminuir los errores arrojados en la predicción previa. La predicción final se obtendrá a partir de la suma de todas las predicciones de los árboles de decisión implementados.
 
 Al contrario de los modelos propuestos hasta ahora, el método de GB se trata de una técnica no interpretable, que además requiere de un gran esfuerzo en la parametrización o *fine-tunning*, de manera que no se caiga en un sobreajuste al conjunto de datos.
 
+## Evaluación de los modelos
+
+A la hora de evaluar cada modelo y determinar su bondad de ajuste, vamos a apoyarnos fundamentalmente en cuatro validaciones:
+
+1. Coeficiente de determinación ajustado. Su valor indica la proporción de variabilidad en la variable endógena explicada por el modelo en relación a la variabilidad total, ajustándose al número de grados de libertad: 
+    
+  <a href="https://www.codecogs.com/eqnedit.php?latex=\bar{R}^2&space;=1&space;-&space;\frac{n-1}{n-k-1}&space;\frac{SS_{\text{res}}}{SS_{\text{tot}}}" target="_blank"><img src="https://latex.codecogs.com/svg.latex?\bar{R}^2&space;=1&space;-&space;\frac{n-1}{n-k-1}&space;\frac{SS_{\text{res}}}{SS_{\text{tot}}}" title="\bar{R}^2 =1 - \frac{n-1}{n-k-1} \frac{SS_{\text{res}}}{SS_{\text{tot}}}" /></a>
+
+  siendo n el tamaño de la base de datos, k el número de variables explicativas, SS<sub>res</sub> la suma de residuos al cuadrado y SS<sub>tot</sub> la suma total de cuadrados.
+
+2. *I* de Moran. Este indicador proporciona una medida de la autocorrelación espacial, comparando el valor en una determinada área i en relación al resto de áreas. Su forma viene dada por
+    
+  <a href="https://www.codecogs.com/eqnedit.php?latex=I&space;=&space;\frac{N}{\sum_i&space;\sum_j&space;w_{ij}}&space;\frac{\sum_i&space;\sum_j&space;w_{ij}&space;(y_i&space;-&space;\bar{y})&space;(y_j&space;-&space;\bar{y})}{\sum_i&space;(y_i&space;-&space;\bar{y})^2}" target="_blank"><img src="https://latex.codecogs.com/svg.latex?I&space;=&space;\frac{N}{\sum_i&space;\sum_j&space;w_{ij}}&space;\frac{\sum_i&space;\sum_j&space;w_{ij}&space;(y_i&space;-&space;\bar{y})&space;(y_j&space;-&space;\bar{y})}{\sum_i&space;(y_i&space;-&space;\bar{y})^2}" title="I = \frac{N}{\sum_i \sum_j w_{ij}} \frac{\sum_i \sum_j w_{ij} (y_i - \bar{y}) (y_j - \bar{y})}{\sum_i (y_i - \bar{y})^2}" /></a>
+    
+  siendo N el número de áreas consideradas, w<sub>ij</sub> las componentes de la matriz de pesos espaciales y Y<sub>i</sub> el valor de la variable Y en el área i.
+    
+3. *Test* de *Jarque-Bera*. Se trata de una prueba de bondad de ajuste para comprobar si una muestra de datos tiene la asimetría y curtosis de una distribución normal. Su forma es
+
+  <a href="https://www.codecogs.com/eqnedit.php?latex=I&space;=&space;\frac{n}{6}&space;\left&space;(&space;S^2&space;&plus;&space;\frac{1}{4}&space;(K-3)^2\right&space;)" target="_blank"><img src="https://latex.codecogs.com/svg.latex?I&space;=&space;\frac{n}{6}&space;\left&space;(&space;S^2&space;&plus;&space;\frac{1}{4}&space;(K-3)^2\right&space;)" title="I = \frac{n}{6} \left ( S^2 + \frac{1}{4} (K-3)^2\right )" /></a>
+    
+  donde n es el número de observaciones, S la asimetría de la muestra y K la curtosis.
+    
+4. *Spatial Scan Statistics*. Detecta y evalúa *clusters* en el espacio, permitiendo diferenciar si estos ocurren de forma aleatoria o siguen una distribución de probabilidad determinada. Para ello, se analiza gradualmente en intervalos espaciales si la variable en cuestión toma valores diferentes a los esperados.
+    
+    En nuestro caso, usaremos la herramienta [SatScan](https://www.satscan.org/), un *software* especializado mediante el cual analizaremos los residuos de cada modelo, esperando que su distribución sea normal en cada región del espacio. Definimos estos intervalos espaciales usando círculos que contengan al 10\% de la población y cuyo centro esté localizado en cada una de nuestras observaciones. El programa se valdrá de simulaciones Montecarlo, obteniendo un p-value para cada región que no cumpla la distribución esperada.
+
 ## Comparativa entre modelos
 
-Como puede observarse, todos los modelos poseen un coeficiente de determinación ajustado superior al $\bar{R}^2>75\%$ sobre una base de datos de prueba, por lo que todos ellos proporcionan una explicación lo suficientemente buena de la variabilidad de la variable dependiente.
+Como puede observarse, todos los modelos poseen un coeficiente de determinación ajustado superior al 75% sobre una base de datos de prueba, por lo que todos ellos proporcionan una explicación lo suficientemente buena de la variabilidad de la variable dependiente.
 
-![Comparativa](https://github.com/AndreaAzabal/proyecto-vivienda/blob/gh-pages/images/R_2_por_modelo.PNG)
+![Comparativa_R2](/images/R_2_por_modelo.PNG)
 
 En lo referente al poder predictivo de cada uno de ellos, es necesario diferenciar el modelo de *Machine Learning*, *Gradient Boost*, por tratarse de un algoritmo no interpretable. Así, si bien es el que mejores predicciones arroja de todos los modelos implementados, no tenemos conocimiento de cómo está contribuyendo cada variable, es decir, no se conoce el efecto marginal de cada atributo al precio final de la vivienda. En este sentido, se trata de una ''caja negra'' que puede no ser del todo conveniente si lo que se busca es entender cómo se ve afectado el valor de un inmueble en función de sus características. 
 
-De entre las modelizaciones restantes, las cuales sí son interpretables, aquellas con mayor capacidad predictiva son, como era de esperar tras haber estudiado sus residuos, el modelo de retardo espacial y el modelo de error espacial. Estos algoritmos sí que permiten conocer cómo afecta la variación de una variable independiente al resultado final, por lo que son una elección acertada en las situaciones en las que se requiera considerar este tipo de impacto sobre el precio de la vivienda.
+Si indagamos un poco más en los residuos, vemos lo siguiente:
 
-Por otra parte, es útil considerar la información recopilada en el cuadro \ref{tab:resultados_satscan_global}, en el cual se muestran los resultados del análisis estadístico espacial realizado mediante la herramienta \textit{SatScan}. Conociéndose el número de \textit{clusters} con p-value inferior al 10\%, así como el porcentaje de población que estos representan y su distribución en el espacio, podremos discernir las zonas problemáticas para cada modelo. De esta forma, por ejemplo, para los modelos interpretables SAR y SEM se tiene que el centro de Madrid es probablemente más propenso a arrojar errores en la predicción, si bien el porcentaje total de la población que representan es bastante bajo ($<5\%)$. En contraposición, el modelo no interpretable GB es menos fiable al sur y este de la ciudad, comprendiendo en este caso más del doble de observaciones con respecto al SAR y SEM (casi un 10\%).
+![Comparativa_final](/images/comparativa_final.PNG)
+
+El principal objetivo de este proyecto consistía en implementar una correcta modelización del precio del metro cuadrado en la ciudad de Madrid, para lo cual se ha buscado romper tanto la heterocedasticidad como la dependencia espacial con el objetivo de arrojar predicciones robustas sobre futuras valoraciones de nuevos inmuebles. Con esta premisa en mente, podemos descartar los modelos RLM, GWR y GB ya que que no cumplen con la meta que nos hemos propuesto. En efecto, ninguno de ellos es capaz de vencer los efectos espaciales, por lo que sus estimaciones serán en general sesgadas y poco fiables. 
+
+De entre las modelizaciones restantes, las cuales sí son interpretables, aquellas con mayor capacidad predictiva son el modelo de retardo espacial y el modelo de error espacial. Estos algoritmos sí que permiten conocer cómo afecta la variación de una variable independiente al resultado final, por lo que son una elección acertada en las situaciones en las que se requiera considerar este tipo de impacto sobre el precio de la vivienda.
+
+Además, los modelos SAR y SEM sí consiguen deshacerse de los efectos espaciales puesyo que un valor de los parámetros ρ y λ significativos implica un alto nivel de relación autorregresiva espacial entre la variable dependiente y sus observaciones vecinas. Es decir, se están incorporando satisfactoriamente los efectos espaciales en estos modelos. Este factor se ve recalcado mediante el resultado del *test* *I* de Moran, para el cual observamos un valor compatible con la hipótesis nula según la cual no existe dependencia espacial en los residuos. Por tanto, se concluye que los residuos no están autocorrelados espacialmente y **se ha conseguido romper la dependencia espacial**. 
+
+En concreto, a la hora de discernir cuál de los dos modelos es más apropiado, puede argumentarse que el poder de predicción del modelo SAR es ligeramente superior (0.5%), mientras que el modelo SEM parece eliminar más exitosamente la autocorrelación espacial. Por tanto, a priori no existen grandes disimilitudes entre ambos y la elección deberá realizarse basándose en las discrepancias entre resultados --de haberlas-- al aplicarse sobre diferentes bases de datos.
+
+Por otra parte, es útil considerar la información recopilada en el siguiente cuadro, en el cual se muestran los resultados del análisis estadístico espacial realizado mediante la herramienta *SatScan*. 
+
+![Comparativa_final SS](/images/comparativa_final_SS.PNG)
+
+Conociéndose el número de *clusters* con p-value inferior al 10%, así como el porcentaje de población que estos representan y su distribución en el espacio, podremos discernir las zonas problemáticas para cada modelo. De esta forma, por ejemplo, para los modelos interpretables SAR y SEM se tiene que el centro de Madrid es probablemente más propenso a arrojar errores en la predicción, si bien el porcentaje total de la población que representan es bastante bajo (<5%). Así, las posibles causas de este efecto pueden ser las expuestas a continuación:
+
+- Omisión de variables relevantes. Pese a que nuestro modelo incluye la variable *dist\_centro* (representando la distancia al centro de Madrid), así como los diferentes distritos en los que se halla cada piso, puede que la dimensión espacial no se esté teniendo en cuenta adecuadamente o haya más atributos relevantes en esta zona. 
+
+- Mala especificación del modelo. Es posible que nuestro modelo no sea el adecuado para resolver este tipo de problema y, aunque se incluyan más variables explicativas, no se aprecie ninguna mejora significativa. 
+
+- Problemas con la linealidad del modelo. Puede ocurrir que las variables presenten no linealidades precisamente en las regiones identificadas con *SatScan*.
+
+En contraposición, el modelo no interpretable GB es menos fiable al sur y este de la ciudad, comprendiendo en este caso más del doble de observaciones con respecto al SAR y SEM (casi un 10%).
+
 
 
