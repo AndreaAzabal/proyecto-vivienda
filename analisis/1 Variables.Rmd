@@ -1,14 +1,3 @@
----
-title: "Variables analisis TFM"
-output:
-  pdf_document:
-    keep_tex: true
----
-#######################################################################################################
-###############################   TFM   ###############################################
-#######################################################################################################
-#######################################################################################################
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyr)
@@ -22,6 +11,7 @@ source("Functions.R")
 ```
 
 # Importamos el dataset
+
 ```{r}
 tabla.raw<-read.csv("./Data/IdealistaDepurado.csv",sep=",",encoding="UTF-8")
 head(tabla.raw)
@@ -35,23 +25,17 @@ dups_identicos <- tabla.raw[duplicated(tabla.raw[2:30]),]
 dups_identicos
 ```
 
-```{r}
-tabla.raw[tabla.raw$price==696000 | (tabla.raw$price==365000 & tabla.raw$metros==84 & tabla.raw$baths==2 ) | tabla.raw$price==448000,]
-```
-
 - Todo excepto localización
 
 ```{r}
 dups <- tabla.raw %>% group_by_at(vars(-id,-lat,-lon,-calle,-exacta)) %>% dplyr::filter(n()>1) %>% ungroup() %>% dplyr::select(id,price,exacta,calle) %>% arrange(desc(price))
 dups
 ```
-**Hay 169 duplicados en total**.
 
 ```{r}
 dummy <- dplyr::select(tabla.raw,-id,-lat,-lon,-calle,-exacta)
 tabla.raw[(duplicated(dummy)),] %>% dplyr::select(id,price,exacta,calle) %>% arrange(desc(price))
 ```
-**Hay que eliminar 94 filas**
 
 Elimino primero los que tienen dirección exacta = 0:
 
@@ -61,14 +45,14 @@ to.delete <- tabla.raw[(duplicated(dummy) & tabla.raw$exacta==0),]
 to.delete %>% dplyr::select(id,price,exacta,calle) %>% arrange(desc(price))
 to.delete.id <- tabla.raw[(duplicated(dummy) & (tabla.raw$exacta==0)),1]
 ```
-**Se han eliminado 84 de 94, quedan 10 que tienen dirección exacta en todos los casos o en al menos uno de ellos**
+
 
 ```{r}
 tabla2 <- tabla.raw[ ! tabla.raw$id %in% to.delete.id, ]
 
 tabla2 %>% group_by_at(vars(-id,-lat,-lon,-calle,-exacta)) %>% dplyr::filter(n()>1) %>% ungroup() %>% dplyr::select(id,price,exacta,calle) %>% arrange(desc(price))
 ```
-Ordeno al revés y así elimino fijo todos los que tienen exacta = 0:
+Ordeno al revés y así elimino todos los que tienen exacta = 0:
 
 ```{r}
 dummy2 <- dplyr::select(tabla2,-id,-lat,-lon,-calle,-exacta)
@@ -77,6 +61,7 @@ to.delete.id2 <- tabla2[(duplicated(dummy2, fromLast=TRUE)),1]
 tabla <- tabla2[ ! tabla2$id %in% to.delete.id2, ]
 ```
 Ya no quedan duplicados:
+
 ```{r}
 dummy3 <- dplyr::select(tabla,-id,-lat,-lon,-calle,-exacta)
 tabla[(duplicated(dummy3, fromLast=TRUE)),] %>% dplyr::select(id,price,exacta,calle) %>% arrange(desc(price))
@@ -84,7 +69,7 @@ tabla %>% group_by_at(vars(-id,-lat,-lon,-calle,-exacta)) %>% dplyr::filter(n()>
 ```
 
 
-#DISTANCIAS
+# DISTANCIAS
 
 ```{r}
 Descarga_OSM_points<-function(ciudad,key,value){
@@ -102,11 +87,6 @@ mapa1 <- opq(bbox = "Madrid, Spain")
 Hospitales<-Descarga_OSM(ciudad="Madrid",key='amenity',value = "hospital")
 ```
 
-```{r}
-#Hospoints<-Descarga_OSM_points(ciudad="Madrid", key='amenity',value = "hospital")
-#coords_hosp <- do.call(rbind, st_geometry(Hospoints$osm_points)) %>% 
-#    as_tibble() %>% setNames(c("lon","lat"))
-```
 
 - Centros Comerciales:
 
@@ -206,8 +186,6 @@ summary(tabla)
 glimpse(tabla)
 ```
 
-
-
 # Histogramas
 
 - **Variables numéricas**
@@ -250,7 +228,6 @@ Hist1 <- function(bbdd_fff,response,predicted,var,n,breaks=8){
 ```
 
 
-
 ```{r warning=FALSE, message=FALSE}
 #Defino vector de numericas
 numericas_hist<-dplyr::select(tabla,price,lon,lat,precio.metro,planta,construccion,metros,habitaciones,baths, dist_cc, dens_cc, dist_hospital, dens_hospital, dist_tp, dens_tp, dist_colegios, dens_colegios, dist_centro)
@@ -260,6 +237,7 @@ pr<-Hist1(numericas_hist,response = numericas_hist[,1],predicted = 0,var = numer
 plot(pr)
 }
 ```
+
 ```{r}
 #Vector de double
 numericas_dbl<-dplyr::select(tabla,precio.metro, price,lon,lat,precio.metro,planta,construccion,metros, dist_cc, dens_cc, dist_hospital, dens_hospital, dist_tp, dens_tp, dist_colegios, dens_colegios)
@@ -268,6 +246,7 @@ for (i in names(numericas_dbl)){
 hist(numericas_dbl[[i]], main=colnames(numericas_dbl[i]), xlab=colnames(numericas_dbl[i]))
 }
 ```
+
 - **Variables integer**
 
 ```{r}
@@ -281,9 +260,7 @@ barplot(table(numericas_int[[i]]), main=colnames(numericas_int[i]), xlab=colname
 ```
 
 
-
-
-# distritos
+# Distritos
 
 ```{r}
 bp<- ggplot(tabla, aes(x="", y=distrito, fill=distrito))+
@@ -307,7 +284,6 @@ cr <- cor(numericas, use="complete.obs")
 ggcorrplot(cr, hc.order = TRUE,type = "lower",lab = TRUE)
 ```
 # Outliers
-
 
 ```{r}
 #Vector de double
@@ -353,106 +329,6 @@ boxplot(tabla$log.dist_tp)
 boxplot(tabla$log.dist_colegios)
 ```
 
-#Anexo TFM: ANALISIS DE VARIABLES
-
-
-#VARIABLES USADAS EN LOS MODELOS
-#log.pm,habitaciones,baths,terraza,ascensor,aire,garaje,piscina,trastero,armarios,reformar,exterior,balcon,duplex,estudio,piso,dens_cc,dens_hospital,log.dist_tp,dens_colegios
-
-
-```{r warning=FALSE, message=FALSE}
-#Defino vector de numericas
-numericas_hist<-dplyr::select(tabla,log.pm,habitaciones,baths,terraza,ascensor,aire,garaje,piscina,trastero,armarios,reformar,exterior,balcon,duplex,estudio,piso,dens_cc,dens_hospital,log.dist_tp,dens_colegios)
-#Represento
-for (i in 1:ncol(numericas_hist)){
-pr<-Hist(numericas_hist,response = numericas_hist[,1],predicted = 0,var = numericas_hist[,i],n=i,breaks = 10)
-plot(pr)
-}
-```
-
-```{r}
-#Vector de double
-numericas_outliers<-dplyr::select(tabla,log.pm,habitaciones,baths,terraza,ascensor,aire,garaje,piscina,trastero,armarios,reformar,exterior,balcon,duplex,estudio,piso,dens_cc,dens_hospital,log.dist_tp,dens_colegios)
-for (i in names(numericas_outliers)){
-boxplot(numericas_outliers[[i]], main=colnames(numericas_outliers[i]), xlab=colnames(numericas_outliers[i]))
-}
-```
-
-```{r}
-#Vector de enteros
-numericas_int<-dplyr::select(tabla,log.pm,habitaciones,baths,terraza,ascensor,aire,garaje,piscina,trastero,armarios,reformar,exterior,balcon,duplex,estudio,piso,dens_cc,dens_hospital,log.dist_tp,dens_colegios)
-
-#Represento
-for (i in names(numericas_int)){
-barplot(table(numericas_int[[i]]), main=colnames(numericas_int[i]), xlab=colnames(numericas_int[i]))
-}
-```
-
-#TODAS LAS VARIABLES:
-
-```{r}
-tabla
-```
-
-
-
-```{r}
-#Vector de double
-numericas_outliers<-dplyr::select(tabla,-distrito, -calle)
-for (i in names(numericas_outliers)){
-boxplot(numericas_outliers[[i]], main=colnames(numericas_outliers[i]), xlab=colnames(numericas_outliers[i]))
-}
-```
-
-
-```{r}
-binarias<-dplyr::select(tabla, terraza, ascensor, aire, exacta, garaje, piscina, zonas.verdes, trastero, armarios, buen.estado, reformar, exterior, balcon, chalet, atico, duplex, estudio, piso)
-
-for (i in names(binarias)){
-  print(colnames(binarias[i]))
-print(table(binarias[[i]]))
-}
-
-```
-
-
-
-
-#-----------------------------
-
-
-```{r}
-tabla_dummy<-pivot_wider(tabla,
-            names_from = "distrito", 
-            values_from = 'distrito', 
-            values_fill = 0,
-            values_fn = function(x) 1)
-colnames(tabla_dummy) <- gsub("-", "_", colnames(tabla_dummy))
-tabla_dummy
-```
-
-
-
-```{r}
-#glimpse(tabla_mod)
-#glimpse(tabla_mod[,-c(1,2,3,4,5,8,20,22,25,32,34,37,38),drop=FALSE])
-tabla_mod<-tabla[,-c(1,2,3,4,5,8,20,22,25,32,34,37,38),drop=FALSE]
-```
-
-```{r, fig.height=16, fig.width=16}
-numericas<-dplyr::select(tabla_mod,-calle,-distrito)
-cr <- cor(numericas, use="complete.obs")
-ggcorrplot(cr, hc.order = TRUE,type = "lower",lab = TRUE)
-```
-
-#Escribir csv
-
-```{r}
-write.csv(tabla,"tabla_raw.csv", row.names = FALSE)
-write.csv(tabla_dummy,"tabla_dummy.csv", row.names = FALSE)
-#write.csv(tabla_mod,"tabla.csv", row.names = FALSE)
-```
-
 
 # Mapas
 
@@ -472,8 +348,6 @@ leaflet(Hospitales[[1]]) %>% addTiles() %>% addPolygons(data = Hospitales[[2]], 
 #                   popup= ~Hospoints$osm_points$name)# carga la capa de puntos mercadonas
 ```
 
-
-
 - Centros Comerciales:
 
 ```{r}
@@ -483,7 +357,6 @@ leaflet(CentrosComerciales[[1]]) %>% addTiles() %>% addPolygons(data = CentrosCo
 ```{r}
 #CCpoints<-Descarga_OSM_points(ciudad="Madrid", key='shop', value = "mall")
 ```
-
 
 ```{r}
 #names(st_geometry(CCpoints$osm_points)) = NULL
@@ -548,7 +421,6 @@ leaflet(Metro$osm_polygons) %>% addTiles() %>% # carga el mosaico base de OSM
 #  labs(x = "", y = "")
 ```
 
-
 ```{r}
 #names(st_geometry(Colegio$osm_points)) = NULL
 #names(st_geometry(Colegio$osm_lines)) = NULL
@@ -563,7 +435,4 @@ leaflet(Metro$osm_polygons) %>% addTiles() %>% # carga el mosaico base de OSM
 ```{r}
 leaflet(Colegios[[1]]) %>% addTiles() %>% addPolygons(data = Colegios[[2]], col = "red",label =Colegios[[3]] ) %>% addCircles()
 ```
-
-
-
 
