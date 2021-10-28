@@ -19,6 +19,50 @@ Es, por tanto, el momento idóneo para proporcionar herramientas de análisis al
 
 La ciudad de Madrid es, sin duda, una de las que más variabilidad presenta en el precio de la vivienda entre distritos o barrios, lo cual la convierte en una elección interesante para este tipo de análisis.  
 
+## Base de datos
+
+La extracción de la información del portal inmobiliario [Idealista](https://www.idealista.com/) se ha llevado a cabo mediante un método de *web scraping* en el que se ha barrido cada uno de los 21 distritos de la ciudad de Madrid, de manera que se ha obtenido un total de 5935 observaciones divididas según se indica en la tabla.
+
+
+Asimismo, en la gráfica se puede conocer la distribución del precio de mercado por metro cuadrado de los inmuebles en los diferentes distritos. Como se puede observar, hay una diferencia del 380% entre el barrio más caro, el de Salamanca, y el más barato, Villaverde. La variabilidad puede observarse en el mapa de la figura.
+
+
+
+Por otra parte, vamos a valernos del proyecto colaborativo [OpenStreetMap](https://www.openstreetmap.org/) para descargar información geográfica relevante (colegios, hospitales, etc.). La situación de los puntos de interés será incluida en nuestro conjunto de datos, permitiéndonos ponderar cada observación en relación a su proximidad a dichas localizaciones.
+
+A continuación se incluyen las visualizaciones de los datos descargados, así como las variables calculadas a partir de los mismos:
+
+
+- Hospitales
+
+La información se ha descargado mediante una búsqueda con \textit{key = 'amenity'} y \textit{value = "hospital"}:
+
+
+
+A partir de esta información se ha calculado la densidad de hospitales en un radio de 1km para cada vivienda.
+
+- Centros comerciales
+
+La información se ha descargado mediante una búsqueda con \textit{key = 'shop'} y \textit{value = "mall"}:
+
+
+
+A partir de esta información se ha calculado la densidad de centros comerciales en un radio de 1km para cada vivienda.
+
+- Transporte público
+
+La información se ha descargado mediante una búsqueda con \textit{key = 'public\_transport'} y \textit{value = "station"}:
+
+
+A partir de esta información se ha calculado la distancia más cercana a una estación de metro o de cercanías RENFE para cada vivienda.
+
+- Colegios
+
+La información se ha descargado mediante una búsqueda con \textit{key = 'amenity'} y \textit{value = "school"}:
+
+
+A partir de esta información se ha calculado la densidad de colegios en un radio de 1km para cada vivienda.
+
 ## Hipótesis previas
 
 Se procede a plantear las hipótesis preliminares para los algoritmos de predicción a implementar, siendo estos tanto interpretables como no interpretables. Asimismo, los distintos modelos predictivos serán juzgados tanto en base a sus respectivas bondades de ajuste como a través del análisis de sus residuos con la finalidad de determinar su idoneidad.
@@ -108,7 +152,7 @@ Así, conseguimos reducir la dependencia espacial de los residuos del modelo, au
 
 El método de \textit{Gradient Boosting} es una técnica de aprendizaje automático o *Machine Learning* que genera un modelo predictivo a partir de un conjunto de algoritmos de predicción débiles, típicamente árboles de decisión. 
 
-Al combinar *weak learners* de forma iterativa, el objetivo es que el algoritmo  F aprenda a predecir valores minimizando el error cuadrático medio $\frac {1}{n}\sum_{i}. De esta manera, en cada iteración el árbol de decisión se centra en disminuir los errores arrojados en la predicción previa. La predicción final se obtendrá a partir de la suma de todas las predicciones de los árboles de decisión implementados.
+Al combinar *weak learners* de forma iterativa, el objetivo es que el algoritmo  F aprenda a predecir valores minimizando el error cuadrático medio. De esta manera, en cada iteración el árbol de decisión se centra en disminuir los errores arrojados en la predicción previa. La predicción final se obtendrá a partir de la suma de todas las predicciones de los árboles de decisión implementados.
 
 Al contrario de los modelos propuestos hasta ahora, el método de GB se trata de una técnica no interpretable, que además requiere de un gran esfuerzo en la parametrización o *fine-tunning*, de manera que no se caiga en un sobreajuste al conjunto de datos.
 
