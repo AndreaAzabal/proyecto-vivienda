@@ -1,15 +1,116 @@
-## Welcome to GitHub Pages
+# Efectos geoespaciales en la modelización del precio de la vivienda en la ciudad de Madrid
 
-You can use the [editor on GitHub](https://github.com/AndreaAzabal/proyecto-vivienda/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
+El objetivo de este proyecto consiste en realizar una estimación fiable del precio de la vivienda en la ciudad de Madrid conocidos los atributos de cada inmueble. Este tipo de estudios ha sido ampliamente realizado en el ámbito de la econometría, sin embargo, muy poca literatura recoge la influencia de los efectos espaciales en el poder predictivo de las distintas modelizaciones al incorporar información geográfica. 
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+Así, con el propósito de estudiar más en profundidad estos efectos, se proponen no solo modelos de regresión lineal múltiples, sino también desarrollos que
+introducen la posible autocorrelación espacial tanto en la variable dependiente como en los residuos del sistema. De este modo, se busca alcanzar una especificación óptima, cuyas predicciones puedan ser aplicadas en el mercado inmobiliario.
 
-### Markdown
+## Antecedentes
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+Es posible, al trabajar con datos de corte transversal, encontrar los denominados **efectos espaciales** que se manifiestan a través de distintas dependencias entre observaciones con cierta proximidad geográfica. Estos efectos han sido ampliamente ignorados a lo largo de la historia por el hecho de que no pueden ser tratados por la econometría estándar, la cual se fundamenta en el análisis e interpretación de sistemas económicos con el fin de predecir variables tales como, por ejemplo, el precio de bienes y servicios. 
 
-```markdown
-Syntax highlighted code block
+Debido a la necesidad de resolver los problemas de origen geoespacial que la econometría estándar no puede solucionar, nació la *econometría espacial*, término acuñado por Paelinck y Klaassen y que hace referencia a las técnicas que tratan las consecuencias causadas por efectos espaciales en el análisis estadístico de modelos econométricos tradicionales. En las últimas décadas, la importancia y relevancia de este tipo de análisis ha ido en auge, debido, en parte, a las cada vez más accesibles y extensas bases de datos geo-referenciados, así como al incremento de la capacidad de computación de modelos cada vez más complejos.
+
+## Contexto
+
+El mercado inmobiliario en España ha sufrido grandes altibajos durante las últimas décadas. Tras el mayor *parón* inmobiliario de la historia de España, producido en el año 2008, hubo un cambio de ciclo en el que los posibles compradores descendieron significativamente y además se tornaron más selectivos. La situación fue mejorando durante la década de los 2010, aunque a partir de 2020 se observa de nuevo una ralentización tanto en la subida del precio de la vivienda como en el volumen de compraventas. Este hecho parece indicar que pueda repetirse una situación similar a la de la crisis de 2008, en la cual el comprador sea reticente a tomar una decisión arriesgada y prefiera informarse adecuadamente. 
+
+Es, por tanto, el momento idóneo para proporcionar herramientas de análisis al comprador que le ayuden a tomar una decisión informada y acertada a la hora de adquirir una vivienda. Una herramienta de modelizado del precio del metro cuadrado como la propuesta en este proyecto, cuyas predicciones sean robustas ante efectos espaciales y, por consiguiente, aporten mayor fiabilidad, es justamente lo que el demandante de vivienda necesita. A su vez, también se trata de un valioso y potente recurso para el sector empresarial, ya que aporta beneficios tales como una correcta valoración o tasación de inmuebles, que además puede descomponerse por características y determinar la aportación de cada una de ellas al precio total de cada vivienda.
+
+La ciudad de Madrid es, sin duda, una de las que más variabilidad presenta en el precio de la vivienda entre distritos o barrios, lo cual la convierte en una elección interesante para este tipo de análisis.  
+
+## Hipótesis previas
+
+Se procede a plantear las hipótesis preliminares para los algoritmos de predicción a implementar, siendo estos tanto interpretables como no interpretables. Asimismo, los distintos modelos predictivos serán juzgados tanto en base a sus respectivas bondades de ajuste como a través del análisis de sus residuos con la finalidad de determinar su idoneidad.
+
+
+### Regresión lineal múltiple (RLM)
+
+Nuestro punto de partida será una regresión lineal múltiple, cuya forma funcional viene dada por:
+
+<a href="https://www.codecogs.com/eqnedit.php?latex=Y&space;=&space;\sum_{i=1}^k&space;X_i&space;\beta_i&space;&plus;&space;\epsilon" target="_blank"><img src="https://latex.codecogs.com/svg.latex?Y&space;=&space;\sum_{i=1}^k&space;X_i&space;\beta_i&space;&plus;&space;\epsilon" title="Y = \sum_{i=1}^k X_i \beta_i + \epsilon" /></a>
+
+donde Y es la variable dependiente de interés (el precio de la vivienda), X<sub>i</sub> son las variables explicativas del modelo, β<sub>i</sub> es el coeficiente de regresión que mide la influencia de cada variable X<sub>i</sub> sobre Y y ε es el error aleatorio.
+
+Las principales hipótesis de este tipo de regresión son:
+
+
+- **Linealidad** en la relación entre X<sub>i</sub> e Y.
+  
+- **Independencia** entre las observaciones, entre las variables explicativas y entre los residuos del modelo.
+    
+- **Normalidad** en la distribución de los residuos.
+    
+- **Homocedasticidad** en los residuos.
+    
+
+En cuanto se viola una de las hipótesis, el modelo deja de ser óptimo y no podemos garantizar la fiabilidad de sus predicciones. En este caso, nuestro conjunto de datos está muy afectado por la dependencia espacial, lo cual se traduce en dependencias entre observaciones y heterocedasticidad en los residuos. Para hacer frente a este inconveniente, tomamos dos planteamientos alternativos:
+
+1.  Adición de variables espaciales con la intención de vencer la dependencia espacial.
+    
+2. Adición de no linealidades mediante modelos *Multiadaptative regression splines* (MARS).
+
+Aun así, no esperamos lograr romper completamente los efectos espaciales, por lo que recurriremos a modelos más robustos en los que se añade un término de dependencia espacial, bien en la variable dependiente (modelos de retardo espacial), bien en los residuos (modelos de error espacial).
+
+### Modelos de retardo espacial (SAR)
+
+Este tipo de modelos incluyen la correlación espacial en la variable dependiente y permiten a las observaciones en una determinada zona depender de observaciones en áreas vecinas. El modelo de retardo espacial básico se define como:
+
+
+<a href="https://www.codecogs.com/eqnedit.php?latex=Y=X\beta&space;&plus;&space;\rho&space;WY&plus;\epsilon" target="_blank"><img src="https://latex.codecogs.com/svg.latex?Y=X\beta&space;&plus;&space;\rho&space;WY&plus;\epsilon" title="Y=X\beta + \rho WY+\epsilon" /></a>
+
+
+siendo $W$ la matriz de pesos espaciales, ε los errores independientes y ρ el nivel de relación autorregresiva espacial entre la variable dependiente y sus observaciones vecinas. Es decir, ρ es el impacto ''boca a boca'', lo cual quiere decir que las observaciones están impactadas por lo que sucede a su alrededor.
+
+Resolviendo el sistema se obtiene:
+
+<a href="https://www.codecogs.com/eqnedit.php?latex=Y=(I-\rho&space;W)^{-1}(X\beta&space;&plus;\epsilon)&space;\to&space;E[Y]=(I-\rho&space;W)^{-1}(X\beta)" target="_blank"><img src="https://latex.codecogs.com/svg.latex?Y=(I-\rho&space;W)^{-1}(X\beta&space;&plus;\epsilon)&space;\to&space;E[Y]=(I-\rho&space;W)^{-1}(X\beta)" title="Y=(I-\rho W)^{-1}(X\beta +\epsilon) \to E[Y]=(I-\rho W)^{-1}(X\beta)" /></a>
+
+De esta forma, esperamos obtener un ρ muy significativo, de manera que los residuos del sistema puedan considerarse independientes y, por tanto, estemos ante una mejor especificación del modelo. 
+
+### Modelos de error espacial (SEM)
+
+Como ya hemos argumentado, este tipo de modelos explican la dependencia espacial en el término de error o residual, es decir,  el error lleva implícita una estructura espacial. 
+
+Se define como:
+
+<a href="https://www.codecogs.com/eqnedit.php?latex=Y=X\beta&space;&plus;&space;e" target="_blank"><img src="https://latex.codecogs.com/svg.latex?Y=X\beta&space;&plus;&space;e" title="Y=X\beta + e" /></a>
+
+<a href="https://www.codecogs.com/eqnedit.php?latex=e&space;=&space;\lambda&space;W&space;e&space;&plus;&space;\epsilon" target="_blank"><img src="https://latex.codecogs.com/svg.latex?e&space;=&space;\lambda&space;W&space;e&space;&plus;&space;\epsilon" title="e = \lambda W e + \epsilon" /></a>
+
+donde W es la matriz de pesos espaciales, ε el término aleatorio de error y $\lambda$ es el parámetro autorregresivo. 
+
+Resolviendo el sistema:
+
+<a href="https://www.codecogs.com/eqnedit.php?latex=Y=X\beta&space;&plus;&space;(I-&space;\lambda&space;W)^{-1}&space;\epsilon" target="_blank"><img src="https://latex.codecogs.com/svg.latex?Y=X\beta&space;&plus;&space;(I-&space;\lambda&space;W)^{-1}&space;\epsilon" title="Y=X\beta + (I- \lambda W)^{-1} \epsilon" /></a>
+
+En esta ocasión esperamos vencer por completo la heterocedasticidad de los residuos y, al igual que en el modelo SAR, lograr una muy buena especificación del sistema.
+
+### Modelos geográficamente ponderados (GWR)
+
+Hasta ahora hemos definido modelos de regresión global general, en los cuales se tienen valores únicos de los parámetros β<sub>i</sub> para todas las observaciones del conjunto de datos.
+
+Con este tipo de modelizado, sin embargo, en lugar de tener un coeficiente global para cada variable, los coeficientes pueden variar en función del espacio. La idea fundamental es la medición de la relación entre la variable respuesta y sus variables explicativas independientes a través de la combinación de las diferentes áreas geográficas.
+
+El modelo se define como:  
+
+<a href="https://www.codecogs.com/eqnedit.php?latex=Y_s=\beta_{s1}X_1&plus;\ldots&plus;\beta_{s1}X_p&plus;\epsilon" target="_blank"><img src="https://latex.codecogs.com/svg.latex?Y_s=\beta_{s1}X_1&plus;\ldots&plus;\beta_{s1}X_p&plus;\epsilon" title="Y_s=\beta_{s1}X_1+\ldots+\beta_{s1}X_p+\epsilon" /></a>
+
+siendo $s$ cada zona geográfica. Es decir, en el modelo ponderado geográficamente se tienen diferentes estimadores para cada una de las variables dependiendo de la localización.
+  
+Resolviendo el sistema:
+
+<a href="https://www.codecogs.com/eqnedit.php?latex=\beta_s=(X^tW_sX)^{-1}X^tW_sY" target="_blank"><img src="https://latex.codecogs.com/svg.latex?\beta_s=(X^tW_sX)^{-1}X^tW_sY" title="\beta_s=(X^tW_sX)^{-1}X^tW_sY" /></a>
+
+Así, conseguimos reducir la dependencia espacial de los residuos del modelo, aunque no vamos a romper la heterocedasticidad de los mismos como veremos más adelante.
+
+### Gradient Boosting (GB)
+
+El método de \textit{Gradient Boosting} es una técnica de aprendizaje automático o *Machine Learning* que genera un modelo predictivo a partir de un conjunto de algoritmos de predicción débiles, típicamente árboles de decisión. 
+
+Al combinar *weak learners* de forma iterativa, el objetivo es que el algoritmo  F aprenda a predecir valores minimizando el error cuadrático medio $\frac {1}{n}\sum_{i}. De esta manera, en cada iteración el árbol de decisión se centra en disminuir los errores arrojados en la predicción previa. La predicción final se obtendrá a partir de la suma de todas las predicciones de los árboles de decisión implementados.
+
+Al contrario de los modelos propuestos hasta ahora, el método de GB se trata de una técnica no interpretable, que además requiere de un gran esfuerzo en la parametrización o *fine-tunning*, de manera que no se caiga en un sobreajuste al conjunto de datos.
 
 # Header 1
 ## Header 2
@@ -25,13 +126,3 @@ Syntax highlighted code block
 
 [Link](url) and ![Image](src)
 ```
-
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/AndreaAzabal/proyecto-vivienda/settings/pages). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
