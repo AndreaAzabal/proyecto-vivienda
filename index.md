@@ -161,25 +161,25 @@ Al contrario de los modelos propuestos hasta ahora, el método de GB se trata de
 
 A la hora de evaluar cada modelo y determinar su bondad de ajuste, vamos a apoyarnos fundamentalmente en cuatro validaciones:
 
-1. Coeficiente de determinación ajustado. Su valor indica la proporción de variabilidad en la variable endógena explicada por el modelo en relación a la variabilidad total, ajustándose al número de grados de libertad: 
+- Coeficiente de determinación ajustado. Su valor indica la proporción de variabilidad en la variable endógena explicada por el modelo en relación a la variabilidad total, ajustándose al número de grados de libertad: 
     
   <a href="https://www.codecogs.com/eqnedit.php?latex=\bar{R}^2&space;=1&space;-&space;\frac{n-1}{n-k-1}&space;\frac{SS_{\text{res}}}{SS_{\text{tot}}}" target="_blank"><img src="https://latex.codecogs.com/svg.latex?\bar{R}^2&space;=1&space;-&space;\frac{n-1}{n-k-1}&space;\frac{SS_{\text{res}}}{SS_{\text{tot}}}" title="\bar{R}^2 =1 - \frac{n-1}{n-k-1} \frac{SS_{\text{res}}}{SS_{\text{tot}}}" /></a>
 
   siendo n el tamaño de la base de datos, k el número de variables explicativas, SS<sub>res</sub> la suma de residuos al cuadrado y SS<sub>tot</sub> la suma total de cuadrados.
 
-2. *I* de Moran. Este indicador proporciona una medida de la autocorrelación espacial, comparando el valor en una determinada área i en relación al resto de áreas. Su forma viene dada por
+- *I* de Moran. Este indicador proporciona una medida de la autocorrelación espacial, comparando el valor en una determinada área i en relación al resto de áreas. Su forma viene dada por
     
   <a href="https://www.codecogs.com/eqnedit.php?latex=I&space;=&space;\frac{N}{\sum_i&space;\sum_j&space;w_{ij}}&space;\frac{\sum_i&space;\sum_j&space;w_{ij}&space;(y_i&space;-&space;\bar{y})&space;(y_j&space;-&space;\bar{y})}{\sum_i&space;(y_i&space;-&space;\bar{y})^2}" target="_blank"><img src="https://latex.codecogs.com/svg.latex?I&space;=&space;\frac{N}{\sum_i&space;\sum_j&space;w_{ij}}&space;\frac{\sum_i&space;\sum_j&space;w_{ij}&space;(y_i&space;-&space;\bar{y})&space;(y_j&space;-&space;\bar{y})}{\sum_i&space;(y_i&space;-&space;\bar{y})^2}" title="I = \frac{N}{\sum_i \sum_j w_{ij}} \frac{\sum_i \sum_j w_{ij} (y_i - \bar{y}) (y_j - \bar{y})}{\sum_i (y_i - \bar{y})^2}" /></a>
     
   siendo N el número de áreas consideradas, w<sub>ij</sub> las componentes de la matriz de pesos espaciales y Y<sub>i</sub> el valor de la variable Y en el área i.
     
-3. *Test* de *Jarque-Bera*. Se trata de una prueba de bondad de ajuste para comprobar si una muestra de datos tiene la asimetría y curtosis de una distribución normal. Su forma es
+- *Test* de *Jarque-Bera*. Se trata de una prueba de bondad de ajuste para comprobar si una muestra de datos tiene la asimetría y curtosis de una distribución normal. Su forma es
 
   <a href="https://www.codecogs.com/eqnedit.php?latex=I&space;=&space;\frac{n}{6}&space;\left&space;(&space;S^2&space;&plus;&space;\frac{1}{4}&space;(K-3)^2\right&space;)" target="_blank"><img src="https://latex.codecogs.com/svg.latex?I&space;=&space;\frac{n}{6}&space;\left&space;(&space;S^2&space;&plus;&space;\frac{1}{4}&space;(K-3)^2\right&space;)" title="I = \frac{n}{6} \left ( S^2 + \frac{1}{4} (K-3)^2\right )" /></a>
     
   donde n es el número de observaciones, S la asimetría de la muestra y K la curtosis.
     
-4. *Spatial Scan Statistics*. Detecta y evalúa *clusters* en el espacio, permitiendo diferenciar si estos ocurren de forma aleatoria o siguen una distribución de probabilidad determinada. Para ello, se analiza gradualmente en intervalos espaciales si la variable en cuestión toma valores diferentes a los esperados.
+- *Spatial Scan Statistics*. Detecta y evalúa *clusters* en el espacio, permitiendo diferenciar si estos ocurren de forma aleatoria o siguen una distribución de probabilidad determinada. Para ello, se analiza gradualmente en intervalos espaciales si la variable en cuestión toma valores diferentes a los esperados.
     
     En nuestro caso, usaremos la herramienta [SatScan](https://www.satscan.org/), un *software* especializado mediante el cual analizaremos los residuos de cada modelo, esperando que su distribución sea normal en cada región del espacio. Definimos estos intervalos espaciales usando círculos que contengan al 10\% de la población y cuyo centro esté localizado en cada una de nuestras observaciones. El programa se valdrá de simulaciones Montecarlo, obteniendo un p-value para cada región que no cumpla la distribución esperada.
 
