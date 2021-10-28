@@ -125,7 +125,7 @@ tabla$dens_cc<-apply((Distancias<1)*1,1,sum)
 - Transporte público
 
 
-```{r, fig.heigth=20}
+```{r}
 Metro<-Descarga_OSM_points(ciudad="Madrid", key='public_transport', value = "station")
 ```
 
