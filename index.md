@@ -36,7 +36,7 @@ A continuación se incluyen las visualizaciones de los datos descargados, así c
 
 La información se ha descargado mediante una búsqueda con *key = 'amenity'* y *value = "hospital"*:
 
-![Mapa de hospitales](https://github.com/AndreaAzabal/proyecto-vivienda/blob/gh-pages/images/mapa_hospitales.PNG)
+![Mapa de hospitales](/images/mapa_hospitales.PNG)
 
 A partir de esta información se ha calculado la densidad de hospitales en un radio de 1km para cada vivienda.
 
