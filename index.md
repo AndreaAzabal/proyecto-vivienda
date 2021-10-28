@@ -21,12 +21,11 @@ La ciudad de Madrid es, sin duda, una de las que más variabilidad presenta en e
 
 ## Base de datos
 
-La extracción de la información del portal inmobiliario [Idealista](https://www.idealista.com/) se ha llevado a cabo mediante un método de *web scraping* en el que se ha barrido cada uno de los 21 distritos de la ciudad de Madrid, de manera que se ha obtenido un total de 5935 observaciones divididas según se indica en la tabla.
-
+La extracción de la información del portal inmobiliario [Idealista](https://www.idealista.com/) se ha llevado a cabo mediante un método de *web scraping* en el que se ha barrido cada uno de los 21 distritos de la ciudad de Madrid, de manera que se ha obtenido un total de 5935 observaciones.
 
 Asimismo, en la gráfica se puede conocer la distribución del precio de mercado por metro cuadrado de los inmuebles en los diferentes distritos. Como se puede observar, hay una diferencia del 380% entre el barrio más caro, el de Salamanca, y el más barato, Villaverde. La variabilidad puede observarse en el mapa de la figura.
 
-
+![Precio metro por distrito](https://github.com/AndreaAzabal/proyecto-vivienda/blob/gh-pages/images/precio_metro_por_distrito.PNG)
 
 Por otra parte, vamos a valernos del proyecto colaborativo [OpenStreetMap](https://www.openstreetmap.org/) para descargar información geográfica relevante (colegios, hospitales, etc.). La situación de los puntos de interés será incluida en nuestro conjunto de datos, permitiéndonos ponderar cada observación en relación a su proximidad a dichas localizaciones.
 
@@ -35,31 +34,33 @@ A continuación se incluyen las visualizaciones de los datos descargados, así c
 
 - Hospitales
 
-La información se ha descargado mediante una búsqueda con \textit{key = 'amenity'} y \textit{value = "hospital"}:
+La información se ha descargado mediante una búsqueda con *key = 'amenity'* y *value = "hospital"*:
 
-
+![Mapa de hospitales](https://github.com/AndreaAzabal/proyecto-vivienda/blob/gh-pages/images/mapa_hospitales.PNG)
 
 A partir de esta información se ha calculado la densidad de hospitales en un radio de 1km para cada vivienda.
 
 - Centros comerciales
 
-La información se ha descargado mediante una búsqueda con \textit{key = 'shop'} y \textit{value = "mall"}:
+La información se ha descargado mediante una búsqueda con *key = 'shop'* y *value = "mall"*:
 
-
+![Mapa de centros comerciales](https://github.com/AndreaAzabal/proyecto-vivienda/blob/gh-pages/images/mapa_cc.PNG)
 
 A partir de esta información se ha calculado la densidad de centros comerciales en un radio de 1km para cada vivienda.
 
 - Transporte público
 
-La información se ha descargado mediante una búsqueda con \textit{key = 'public\_transport'} y \textit{value = "station"}:
+La información se ha descargado mediante una búsqueda con *key = 'public\_transport'* y *value = "station"*:
 
+![Mapa de transporte publico](https://github.com/AndreaAzabal/proyecto-vivienda/blob/gh-pages/images/mapa_tp.PNG)
 
 A partir de esta información se ha calculado la distancia más cercana a una estación de metro o de cercanías RENFE para cada vivienda.
 
 - Colegios
 
-La información se ha descargado mediante una búsqueda con \textit{key = 'amenity'} y \textit{value = "school"}:
+La información se ha descargado mediante una búsqueda con *key = 'amenity'* y *value = "school"*:
 
+![Mapa de colegios](https://github.com/AndreaAzabal/proyecto-vivienda/blob/gh-pages/images/mapa_colegios.PNG)
 
 A partir de esta información se ha calculado la densidad de colegios en un radio de 1km para cada vivienda.
 
