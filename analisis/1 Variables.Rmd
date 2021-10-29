@@ -87,7 +87,6 @@ mapa1 <- opq(bbox = "Madrid, Spain")
 Hospitales<-Descarga_OSM(ciudad="Madrid",key='amenity',value = "hospital")
 ```
 
-
 - Centros Comerciales:
 
 ```{r}
@@ -120,7 +119,6 @@ tabla$dist_cc<-round(apply(Distancias,1,min),2)
 tabla$dens_cc<-apply((Distancias<1)*1,1,sum)
 ```
 
-
 ```{r}
 #Hospitales
 coordenadas<-as.data.frame(gCentroid(Hospitales[[2]], byid=TRUE)@coords)
@@ -129,7 +127,6 @@ tabla$dist_hospital<-round(apply(Distancias,1,min),4)
 tabla$dens_hospital<-apply((Distancias<1)*1,1,sum)
 ```
 
-
 ```{r}
 #Metro
 #coordenadas<-as.data.frame(gCentroid(Hospitales[[2]], byid=TRUE)@coords)
@@ -137,7 +134,6 @@ Distancias<-distm(cbind(tabla$lon,tabla$lat),cbind(coords_metro$lon,coords_metro
 tabla$dist_tp<-round(apply(Distancias,1,min),4)
 tabla$dens_tp<-apply((Distancias<1)*1,1,sum)
 ```
-
 
 ```{r}
 #Colegios
@@ -171,11 +167,6 @@ tabla_inconsistencias <- tabla_inconsistencias %>%
 tabla_inconsistencias %>%
   dplyr::filter(inc_neg | inc_tipo | inc_estado | inc_planta | inc_dist) %>%
   dplyr::select(id,piso,atico,duplex,chalet,planta,inc_neg, inc_planta,inc_tipo,inc_estado,inc_dist, dist_cc, dist_tp, dist_hospital, dist_colegios)
-```
-#92462582 cambiar planta por 2
-```{r}
-tabla[tabla$id==92462582,]$planta<-2
-tabla[tabla$id==92462582,]
 ```
 
 # RESUMEN
