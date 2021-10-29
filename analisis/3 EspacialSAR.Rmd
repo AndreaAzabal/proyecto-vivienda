@@ -1,24 +1,3 @@
----
-title: 'MÓDULO 5: Técnicas Avanzadas de Predicción'
-author: "Andrea Azabal Lamoso"
-date: "24/05/2021"
-output:
-  word_document:
-    toc: yes
-  html_document:
-    toc: yes
-    df_print: paged
-  pdf_document:
-    toc: yes
-subtitle: MODELOS LINEALES GENERALIZADOS
----
-
-<style>
-body {
-text-align: justify}
-</style>
-
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, tidy = TRUE)
 library(knitr)
@@ -38,20 +17,14 @@ suppressPackageStartupMessages(library(spatialreg))
 
 
 ```{r}
-#sin villaverde
+# Importar dataset
 tabla<-read.csv("tabla_dummy.csv",sep=",",encoding="UTF-8")
-
-## set the seed to make your partition reproducible
-#set.seed(0)
-#tabla_ind <- sample(seq_len(nrow(tabla)), size = 1000)#QUITAR ESTA MIERDA
-#tabla <- tabla[tabla_ind, ]
 
 print(nrow(tabla))
 
 head(tabla)
 
-
-
+# Formila para el SAR
 formula_completa<-as.formula('log.pm~habitaciones+baths+terraza+ascensor+aire+garaje+piscina+trastero+armarios+reformar+exterior+balcon+duplex+estudio+piso+dens_cc+dens_hospital+log.dist_tp+dens_colegios+dist_centro+arganzuela+barajas+carabanchel+centro+chamartin+chamberi+ciudad_lineal+fuencarral+hortaleza+latina+moncloa+moratalaz+puente_de_vallecas+retiro+salamanca+san_blas+tetuan+usera+vicalvaro+villa_de_vallecas')
 ```
 
@@ -69,12 +42,12 @@ test <- tabla[-train_ind, ]
 ```
 
 #############################
-ENTRENAMIENTO
+# ENTRENAMIENTO
 #############################
 
 
 ```{r}
-#Trained Model
+# Trained Model
 nb_train <- knn2nb(knearneigh(cbind(train$lon, train$lat), k=10))
 modelo_espacial_sar_trained <- lagsarlm(formula = formula_completa, data=train, listw = nb2listw(nb_train, style="W"))
 summary(modelo_espacial_sar_trained)
@@ -85,7 +58,7 @@ summary(modelo_espacial_sar_trained)
 
 
 #########################
-EVALUACIÓN TRAIN
+# EVALUACIÓN TRAIN
 #########################
 
 ```{r}
@@ -95,7 +68,7 @@ y_pred_train <- predict.sarlm(modelo_espacial_sar_trained, train, type="response
 
 
 ########################
-#rho
+# rho
 
 ```{r}
 modelo_espacial_sar_trained$rho
@@ -106,7 +79,7 @@ modelo_espacial_sar_trained$rho.se
 
 
 ######################
-#Adjusted R-Squared
+# Adjusted R-Squared
 
 ```{r}
 residuos_train = train$log.pm - as.data.frame(y_pred_train)$fit
@@ -134,7 +107,7 @@ print(r2_ajusted_train)
 
 
 ######################
-#Jarque Bera
+# Jarque Bera
 
 ```{r}
 jarqueberaTest(residuos_puros_train)
@@ -146,7 +119,7 @@ plot(as.data.frame(y_pred_train)$fit, residuos_train)
 
 
 ######################
-#I moran
+# I moran
 
 ```{r}
 moran.test(x = residuos_puros_train, listw = nb2listw(nb_train, style="W"))
@@ -157,7 +130,7 @@ moran.plot(x = residuos_puros_train, listw = nb2listw(nb_train, style="W"),main=
 -----------------------
 
 #########################
-EVALUACIÓN TEST
+# EVALUACIÓN TEST
 #########################
 
 ```{r}
@@ -169,14 +142,14 @@ y_pred_test <- predict.sarlm(modelo_espacial_sar_trained, test, type="response",
 ```
 
 ######################
-#Adjusted R-Squared
+# Adjusted R-Squared
 
 ```{r}
 residuos_test = test$log.pm - as.data.frame(y_pred_test)$fit
 
 residuos_puros_test = as.numeric(as.matrix(as.matrix(diag(length(test$log.pm))-(as.numeric(modelo_espacial_sar_trained$rho)*nb2mat(nb_test)))) %*% as.matrix(residuos_test))
 
-#Sum of Squared Errors
+# Sum of Squared Errors
 SSE_test=sum(residuos_puros_test**2)
 
 k_test=length(modelo_espacial_sar_trained$coefficients)-1 #Resto 1 para ignorar beta_0
@@ -186,7 +159,7 @@ SSyy_test=sum((test$log.pm-mean(test$log.pm))**2)
 ```
 
 ```{r}
-#R2
+# R2
 r2_test=1-(SSE_test/SSyy_test)
 print(r2_test)
 #Adjusted R-Squared
@@ -195,7 +168,7 @@ r2_ajusted_test
 ```
 
 ######################
-#QQ
+# QQ
 
 ```{r}
 #q-qPlot
@@ -203,7 +176,7 @@ qqnorm(residuos_puros_test, main="Q-Q Plot")
 qqline(residuos_puros_test)
 ```
 ######################
-#Jarque Bera
+# Jarque Bera
 
 ```{r}
 jarqueberaTest(residuos_puros_test)
@@ -221,7 +194,7 @@ plot(scale(as.data.frame(y_pred_test)$fit, center= T, scale= T), scale(residuos_
 ```
 
 ######################
-#I moran
+# I moran
 
 ```{r}
 moran.test(x = residuos_puros_test, listw = nb2listw(nb_test, style="W"))
@@ -230,15 +203,13 @@ moran.plot(x = residuos_puros_test, listw = nb2listw(nb_test, style="W"),main="G
 
 
 #########################
-GUARDAR LOS RESIDUOS PARA EL SATSCAN
+# GUARDAR LOS RESIDUOS PARA EL SATSCAN
 #########################
-
 
 ```{r}
 sar_residuos_puros_multiplicados = as.data.frame(residuos_puros_test)
 residuos_test_df = as.data.frame(residuos_test)
 ```
-
 
 ```{r}
 write.csv(sar_residuos_puros_multiplicados,"sar_residuos_puros_multiplicados.csv", row.names = FALSE)
@@ -285,7 +256,7 @@ print_sk(xx = ak_sar[[1]]@data,sk=sk_sar,pv=0.5)
 print_sk(xx = ak_sar[[1]]@data,sk=sk_sar,pv=1)
 ```
 
-#Con residuos simples:
+# Con residuos simples:
 
 ```{r}
 test_satscan_sar_1 <- tabla[-train_ind, ]
