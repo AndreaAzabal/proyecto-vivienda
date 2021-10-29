@@ -1,24 +1,3 @@
----
-title: 'MÓDULO 5: Técnicas Avanzadas de Predicción'
-author: "Andrea Azabal Lamoso"
-date: "24/05/2021"
-output:
-  word_document:
-    toc: yes
-  html_document:
-    toc: yes
-    df_print: paged
-  pdf_document:
-    toc: yes
-subtitle: MODELOS LINEALES GENERALIZADOS
----
-
-<style>
-body {
-text-align: justify}
-</style>
-
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, tidy = TRUE)
 library(knitr)
@@ -38,6 +17,7 @@ source("Functions.R")
 
 
 ```{r}
+# Importar BDD
 tabla_raw<-read.csv("tabla_raw.csv",sep=",",encoding="UTF-8")
 
 ## set the seed to make your partition reproducible
@@ -46,7 +26,6 @@ tabla_raw<-read.csv("tabla_raw.csv",sep=",",encoding="UTF-8")
 #tabla_raw <- tabla_raw[tabla_ind, ]
 
 print(nrow(tabla_raw))
-
 
 head(tabla_raw)
 ```
@@ -64,11 +43,9 @@ tabla <- pivot_wider(tabla_raw,
 formula_completa<-as.formula('log.pm~habitaciones+baths+terraza+ascensor+aire+garaje+piscina+trastero+armarios+reformar+exterior+balcon+duplex+estudio+piso+dens_cc+dens_hospital+log.dist_tp+dens_colegios+dist_centro+arganzuela+barajas+carabanchel+centro+chamartin+chamberi+ciudad_lineal+fuencarral+hortaleza+latina+moncloa+moratalaz+puente_de_vallecas+retiro+salamanca+san_blas+tetuan+usera+vicalvaro+villa_de_vallecas')
 ```
 
-
 ```{r}
 colnames(tabla) <- gsub("-","_", colnames(tabla))
 ```
-
 
 ```{r}
 glimpse(tabla)
@@ -76,7 +53,7 @@ glimpse(tabla)
 
 
 
-TEST 70% 30%:
+# TEST 70% 30%:
 
 ```{r}
 ## 70% of the sample size
@@ -111,7 +88,7 @@ modelo_espacial_sem_trained$lambda.se
 ```
 
 #########################
-EVALUACIÓN TRAIN
+# EVALUACIÓN TRAIN
 #########################
 
 ```{r}
@@ -124,7 +101,7 @@ residuos_train <- train$log.pm - as.data.frame(y_pred_train)$fit
 residuos_puros_train = as.numeric((as.matrix(diag(nrow(train))) - as.numeric(modelo_espacial_sem_trained$lambda * nb2mat(nb_train))) %*% residuos_train)
 ```
 ######################
-#Adjusted R-Squared
+# Adjusted R-Squared
 
 ```{r}
 #Sum of Squared Errors
@@ -141,7 +118,7 @@ r2_ajusted_train = 1-(SSE_train/SSyy_train)*(n_train-1)/(n_train-(k+1))
 print(r2_ajusted_train)
 ```
 ######################
-#QQ
+# QQ
 
 ```{r}
 #q-qPlot
@@ -151,14 +128,14 @@ qqline(residuos_puros_train)
 
 
 ######################
-#Jarque Bera
+# Jarque Bera
 
 ```{r}
 jarqueberaTest(residuos_puros_train)
 ```
 
 ######################
-#I moran
+# I moran
 
 ```{r}
 moran.test(x = residuos_puros_train, listw = nb2listw(nb_train, style="W"))
@@ -169,7 +146,7 @@ moran.plot(x = residuos_puros_train, listw = nb2listw(nb_train, style="W"),main=
 
 
 #########################
-EVALUACIÓN TEST
+# EVALUACIÓN TEST
 #########################
 
 ```{r}
@@ -184,7 +161,7 @@ residuos_test <- test$log.pm - as.data.frame(y_pred_test)$fit
 residuos_puros_test = as.numeric((as.matrix(diag(nrow(test))) - as.numeric(modelo_espacial_sem_trained$lambda * nb2mat(nb_test))) %*% residuos_test)
 ```
 ######################
-#Adjusted R-Squared
+# Adjusted R-Squared
 
 ```{r}
 #Sum of Squared Errors
@@ -202,7 +179,7 @@ print(r2_ajusted_test)
 ```
 
 ######################
-#QQ
+# QQ
 
 ```{r}
 #q-qPlot
@@ -211,7 +188,7 @@ qqline(residuos_puros_test)
 ```
 
 ######################
-#Jarque Bera
+# Jarque Bera
 
 ```{r}
 jarqueberaTest(residuos_puros_test)
@@ -222,29 +199,28 @@ plot(scale(as.data.frame(y_pred_test)$fit, center= T, scale= T), scale(residuos_
 ```
 
 ######################
-#I moran
+# I moran
 
 ```{r}
 moran.test(x = residuos_puros_test, listw = nb2listw(nb_test, style="W"))
 moran.plot(x = residuos_puros_test, listw = nb2listw(nb_test, style="W"),main="Gráfico I Moran")
 ```
-#########################
-GUARDAR LOS RESIDUOS PARA EL SATSCAN
-#########################
 
+#########################
+# GUARDAR LOS RESIDUOS PARA EL SATSCAN
+#########################
 
 ```{r}
 sem_residuos_puros_multiplicados = as.data.frame(residuos_puros_test)
 residuos_test_df = as.data.frame(residuos_test)
 ```
 
-
 ```{r}
 write.csv(sem_residuos_puros_multiplicados,"sem_residuos_puros_multiplicados.csv", row.names = FALSE)
 write.csv(residuos_test_df,"sem_residuos_puros.csv", row.names = FALSE)
 ```
 
-#SATSCAN
+# SATSCAN
 
 ```{r}
 #SatScan
