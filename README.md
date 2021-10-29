@@ -26,7 +26,7 @@ El desarrollo se ha llevado a cabo en tres fases:
 - Fase 2: limpieza y preparación de la base de datos.
 - Fase 3: análisis y resultados.
 
-# Fase 1
+## Fase 1
 
 La extracción se realiza a partir del portal inmobiliario [Idealista](https://www.idealista.com/). Con esta finalidad se ha generado un script de web scraping en lenguaje R, en el cual se recorre cada uno de los distritos de la ciudad de Madrid en busca de viviendas. Además, se lleva a cabo un registro de los identificadores de cada inmueble para no almacenar duplicados. Los filtros pueden ser modificados con la finalidad de adaptar la zona geográfica de interés, así como filtrar viviendas por tipo, número de habitaciones, ascensor, etc.
 
