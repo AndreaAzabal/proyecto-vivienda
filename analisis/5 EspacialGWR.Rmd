@@ -1,24 +1,3 @@
----
-title: 'MÓDULO 5: Técnicas Avanzadas de Predicción'
-author: "Andrea Azabal Lamoso"
-date: "24/05/2021"
-output:
-  word_document:
-    toc: yes
-  html_document:
-    toc: yes
-    df_print: paged
-  pdf_document:
-    toc: yes
-subtitle: MODELOS LINEALES GENERALIZADOS
----
-
-<style>
-body {
-text-align: justify}
-</style>
-
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, tidy = TRUE)
 library(GWmodel)
@@ -37,6 +16,7 @@ source("Functions_TFM.R")
 source("Functions.R")
 ```
 
+# Generar plot "Geographically Weighted Regression"
 
 ```{r}
 pl_pt2<-function(df,size2,color2,dd=5,sz=500){
@@ -70,20 +50,16 @@ pl_pt2<-function(df,size2,color2,dd=5,sz=500){
   
   return(pintar)
   
-  
-  
 }
 ```
+
+# Importar BDD
 
 ```{r}
 tabla_raw<-read.csv("tabla_raw.csv",sep=",",encoding="UTF-8")
 head(tabla_raw)
 
 ```
-
-
-
-
 
 ```{r}
 tabla <- pivot_wider(tabla_raw,
@@ -93,22 +69,18 @@ tabla <- pivot_wider(tabla_raw,
             values_fn = function(x) 1)
 ```
 
-
 ```{r }
 formula_completa<-as.formula('log.pm~habitaciones+baths+terraza+ascensor+aire+garaje+piscina+trastero+armarios+reformar+exterior+balcon+duplex+estudio+piso+dens_cc+dens_hospital+log.dist_tp+dens_colegios+dist_centro+arganzuela+barajas+carabanchel+centro+chamartin+chamberi+ciudad_lineal+fuencarral+hortaleza+latina+moncloa+moratalaz+puente_de_vallecas+retiro+salamanca+san_blas+tetuan+usera+vicalvaro+villa_de_vallecas')
 ```
-
 
 ```{r}
 colnames(tabla) <- gsub("-","_", colnames(tabla))
 ```
 
-
 ```{r}
 glimpse(tabla)
 ```
-
-
+# Generar dataset TRAIN y TEST
 
 ```{r}
 ## 70% of the sample size
@@ -122,9 +94,7 @@ train <- tabla[train_ind, ]
 test <- tabla[-train_ind, ]
 ```
 
-
-
-
+# Transformación y calculo del ancho de banda idoneo
 
 ```{r warning=FALSE}
 #Convierto mi base de datos en base de datos espacial
@@ -153,7 +123,6 @@ g <- gwr(formula=formula_completa, data=puntos_sp, bandwidth=bw)
 summary(g)
 ```
 
-
 ```{r}
 summary(g$SDF)
 ```
@@ -165,7 +134,6 @@ train$intercept<-g$SDF$`localR2`
 train$registro<-1
 pl_pt2(train,color2 = train$intercept,size2 =train$registro ,dd = 6) 
 ```
-
 
 
 ```{r warning=FALSE,message=FALSE}
@@ -195,7 +163,7 @@ test$intercept<-g_test$SDF$Intercept_coef
 test$registro<-1
 pl_pt2(test,color2 = test$intercept,size2 =test$registro ,dd = 6) 
 ```
-
+# Predicción
 
 ```{r}
 y_pred_gwr <- g_test$SDF$prediction
@@ -210,6 +178,8 @@ test$intercept<-residuos_puros
 test$registro<-1
 pl_pt2(test,color2 = test$intercept,size2 =test$registro ,dd = 6) 
 ```
+
+# Residuos
 
 ```{r}
 #Sum of Squared Errors
@@ -238,11 +208,13 @@ SSyy=sum((test$log.pm-mean(test$log.pm))**2)
 1-(SSE/SSyy)*(n-1)/(n-(k+1))
 ```
 
-
+# Jarque Bera
 
 ```{r}
 jarqueberaTest(residuos_puros)
 ```
+
+# I Moran
 
 ```{r}
 nb_test <- knn2nb(knearneigh(cbind(test$lon, test$lat), k=10))
@@ -254,6 +226,7 @@ moran.plot(x = residuos_puros, listw = nb2listw(nb_test, style="W"),main="Gráfi
 ```{r}
 plot(scale(y_pred_gwr, center= T, scale= T), scale(residuos_puros, center= T, scale= T), xlab = "y_pred tipificada", ylab = "Residuos tipificados", main="Residuos vs. fit tipificados")
 ```
+# QQ plot
 
 ```{r}
 #q-qPlot
@@ -262,7 +235,7 @@ qqline(residuos_puros)
 ```
 
 
-#SATSCAN:
+# SATSCAN:
 
 ```{r}
 #SatScan
