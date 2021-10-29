@@ -1,9 +1,3 @@
-#######################################################################################################
-###############################   TFM   ###############################################
-#######################################################################################################
-#######################################################################################################
-
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyr)
@@ -18,28 +12,28 @@ source("Functions.R")
 ```
 
 
+# Importar BDD
 
 ```{r}
 tabla<-read.csv("tabla_raw.csv",sep=",",encoding="UTF-8")
 head(tabla)
 
-
 tabla <- tabla %>%
   mutate(habitaculos=habitaciones+baths)
-
 ```
 
-
+# Vecinos
 ```{r}
 nb <- knn2nb(knearneigh(cbind(tabla$lon, tabla$lat), k=10))
 ```
 
 
+# Variables no analíticas
+
 ```{r }
 #Elimino id, price, lon, lat, precio.metro, construccion, metros, exacta, zonas verdes, buen estado, obra nueva, atico, calle, dist_cc, dist_hospital, denst_tp, dist_colegios
 
 formula_2<-as.formula('log.pm~habitaciones+baths+terraza+ascensor+aire+garaje+piscina+trastero+armarios+reformar+exterior+balcon+duplex+estudio+piso+distrito+dens_cc+dens_hospital+log.dist_tp+dens_colegios+dist_centro')
-
 ```
 
 ######################
@@ -111,7 +105,7 @@ test <- tabla[-train_ind, ]
 ```
 
 ############
-#ENTRAMIENTO
+# ENTRAMIENTO
 #############
 
 ```{r}
@@ -130,23 +124,23 @@ residuos_train <- y_pred_train - train$log.pm
 ```
 
 ##############
-#Adjusted R-Squared
+# Adjusted R-Squared
 ```{r}
 SSE_train=sum((residuos_train) **2)
 
-#Residual Standard error
+# Residual Standard error
 k=length(modelo_completo2_trained$coefficients)-1 #Resto 1 para ignorar beta_0
 n_train=length(y_pred_train)
 SSyy_train=sum((train$log.pm-mean(train$log.pm))**2)
 
-#Adjusted R-Squared
+# Adjusted R-Squared
 r2_adjusted <- 1-(SSE_train/SSyy_train)*(n_train-1)/(n_train-(k+1))
 
 print(r2_adjusted)
 ```
 
 #################
-#Jarque Bera
+# Jarque Bera
 ```{r}
 jarqueberaTest(residuos_train, robust=TRUE)
 ```
@@ -165,7 +159,7 @@ bptest(formula = formula_2, data = train)
 
 
 ##################
-#I moran
+# I moran
 ```{r}
 nb_train <- knn2nb(knearneigh(cbind(train$lon, train$lat), k=10))
 attr(nb_train,"region.id") <- rownames(train)
@@ -184,23 +178,23 @@ residuos_test <- y_pred_test - test$log.pm
 ```
 
 ##############
-#Adjusted R-Squared
+# Adjusted R-Squared
 ```{r}
 SSE_test=sum((residuos_test) **2)
 
-#Residual Standard error
+# Residual Standard error
 k=length(modelo_completo2_trained$coefficients)-1 #Resto 1 para ignorar beta_0
 n_test=length(y_pred_test)
 SSyy_test=sum((test$log.pm-mean(test$log.pm))**2)
 
-#Adjusted R-Squared
+# Adjusted R-Squared
 r2_adjusted <- 1-(SSE_test/SSyy_test)*(n_test-1)/(n_test-(k+1))
 
 print(r2_adjusted)
 ```
 
 #################
-#Jarque Bera
+# Jarque Bera
 ```{r}
 jarqueberaTest(residuos_test)
 ```
@@ -241,8 +235,7 @@ cvm.test(residuos_test)
 lillie.test(residuos_test)
 ```
 
-
-
+# Histograma
 
 ```{r}
 plotn <- function(x,main="Histograma de frecuencias \ny distribución normal",
@@ -267,7 +260,7 @@ plot(modelo_completo2_trained,2)
 ```
 
 ##################
-#I moran
+# I moran
 ```{r}
 nb_test <- knn2nb(knearneigh(cbind(test$lon, test$lat), k=10))
 attr(nb_test,"region.id") <- rownames(test)
@@ -277,7 +270,7 @@ moran.plot(x = residuos_test, listw = nb2listw(nb_test, style="W"),main="Gráfic
 
 
 #########################
-GUARDAR LOS RESIDUOS PARA EL SATSCAN
+# GUARDAR LOS RESIDUOS PARA EL SATSCAN
 #########################
 
 ```{r}
