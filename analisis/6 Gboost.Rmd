@@ -1,24 +1,3 @@
----
-title: 'MÓDULO 5: Técnicas Avanzadas de Predicción'
-author: "Andrea Azabal Lamoso"
-date: "24/05/2021"
-output:
-  word_document:
-    toc: yes
-  html_document:
-    toc: yes
-    df_print: paged
-  pdf_document:
-    toc: yes
-subtitle: GRADIENT BOOST
----
-
-<style>
-body {
-text-align: justify}
-</style>
-
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, tidy = TRUE)
 library(spatialreg)
@@ -36,21 +15,18 @@ source("Functions_TFM.R")
 source("Functions.R")
 library(gbm)
 ```
-
-
+# BDD
 
 ```{r}
-#sin villaverde
+# Importar BDD
 tabla<-read.csv("tabla_dummy.csv",sep=",",encoding="UTF-8")
 head(tabla)
 
 formula_completa<-as.formula('log.pm~habitaciones+baths+terraza+ascensor+aire+garaje+piscina+trastero+armarios+reformar+exterior+balcon+duplex+estudio+piso+dens_cc+dens_hospital+log.dist_tp+dens_colegios+dist_centro+arganzuela+barajas+carabanchel+centro+chamartin+chamberi+ciudad_lineal+fuencarral+hortaleza+latina+moncloa+moratalaz+puente_de_vallecas+retiro+salamanca+san_blas+tetuan+usera+vicalvaro+villa_de_vallecas')
 ```
 
-
-
-
-------------------------grid
+------------------------
+# Grid search
 
 ```{r}
 ## 70% of the sample size
@@ -132,7 +108,7 @@ plot
 -----------------------------mf
 
 
-MODELO FINAL
+# MODELO FINAL
 
 
 
@@ -165,25 +141,23 @@ best.gbm.fit <- gbm(
 print(best.gbm.fit)
 ```
 
-
-
 ```{r}
 par(mar=c(3,14,1,1))
 summary(best.gbm.fit, las = 2)
 ```
 
 
-TRAIN
+# TRAIN
 
+# Prediccion
 ```{r}
 pred_train_best <- predict(best.gbm.fit , newdata=train, n.trees=9910)
 ```
 
-
 ```{r}
 resid_train_best=(pred_train_best-train$log.pm)
 ```
-
+# Residuos
 
 ```{r}
 #Sum of Squared Errors
@@ -198,7 +172,6 @@ n=nrow(train)
 sqrt(SSE_train_best/(n-(1+k)))
 ```
 
-
 ```{r}
 #R-Squared
 n=length(train$log.pm)
@@ -206,21 +179,20 @@ SSyy_train_best=sum((train$log.pm-mean(train$log.pm))**2)
 1-SSE_train_best/SSyy_train_best
 ```
 
-
 ```{r}
 #Adjusted R-Squared
 1-SSE_train_best/SSyy_train_best*(n-1)/(n-(k+1))
 ```
-
+# Jarque Bera
 ```{r}
 jarqueberaTest(resid_train_best)
 ```
 
+# I Moran
 ```{r}
 #Trained Model
 nb_train <- knn2nb(knearneigh(cbind(train$lon, train$lat), k=10))
 ```
-
 
 ```{r}
 attr(nb_train,"region.id") <- rownames(train)
@@ -229,19 +201,20 @@ moran.plot(x = resid_train_best, listw = nb2listw(nb_train, style="W"),main="Gr�
 moran.mc(resid_train_best, listw=nb2listw(nb_train, style="W"), nsim=100)
 ```
 
-
 ---------------------------------------
-TEST
+# TEST
+
+# Prediccion
 
 ```{r}
 pred_test_best <- predict(best.gbm.fit , newdata=test, n.trees=9910)
 ```
 
-
 ```{r}
 resid_test_best=(pred_test_best-test$log.pm)
 ```
 
+# Residuos
 
 ```{r}
 #Sum of Squared Errors
@@ -256,7 +229,6 @@ n=nrow(test)
 sqrt(SSE_test_best/(n-(1+k)))
 ```
 
-
 ```{r}
 #R-Squared
 n=length(test$log.pm)
@@ -268,17 +240,18 @@ SSyy_test_best=sum((test$log.pm-mean(test$log.pm))**2)
 #Adjusted R-Squared
 1-(SSE_test_best/SSyy_test_best)*(n-1)/(n-(k+1))
 ```
+# Jarque Bera
 
 ```{r}
 jarqueberaTest(resid_test_best)
 ```
 
+# I Moran
+
 ```{r}
 #Trained Model
 nb_test <- knn2nb(knearneigh(cbind(test$lon, test$lat), k=10))
 ```
-
-
 ```{r}
 attr(nb_test,"region.id") <- rownames(test)
 moran.test(x = resid_test_best, listw = nb2listw(nb_test, style="W"))
@@ -286,14 +259,13 @@ moran.plot(x = resid_test_best, listw = nb2listw(nb_test, style="W"),main="Gráf
 moran.mc(resid_test_best, listw=nb2listw(nb_test, style="W"), nsim=100)
 ```
 
-
 ------------------------
 
+# SATSCAN
 
 ```{r}
 residuos_puros_test_df = as.data.frame(resid_test_best)
 ```
-
 
 ```{r}
 write.csv(residuos_puros_test_df,"gboost_residuos_puros.csv", row.names = FALSE)
