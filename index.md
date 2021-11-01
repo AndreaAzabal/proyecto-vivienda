@@ -323,3 +323,6 @@ A lo largo de este proyecto, se han propuesto varias modelizaciones para el desa
 
 Pero, ¿por qué es tan importante incorporar este tipo de efectos? El hecho de que exista una autocorrelación espacial entre los residuos, tal y como indica el resultado obtenido en el *test I de Moran*,  viola la hipótesis de independencia entre los mismos. Como consecuencia, los modelos lineales generados son poco fiables, puesto que los parámetros de regresión pueden estar sesgados, traduciéndose en una sobreestimación o subestimación de su poder predictivo. En concreto, esto significa que los precios de los inmuebles están interconectados, es decir, los pisos caros están cerca de los caros y viceversa. Ignorar este hecho puede acarrear graves consecuencias a la hora de generalizar el modelo y realizar nuevas predicciones, pues puede llevarnos a tomar decisiones erróneas debido al sesgo de la estimación.
 
+## Para saber más...
+Todo el análisis recopilado en este repositorio se ha desarrollado como parte del Trabajo de Fin de Máster realizado en el *Máster en Big Data & Data Science* de la Universidad de Barcelona, colaborando con el Instituo de Formación Continua (IL3). El trabajo completo puede consultarse [aquí](https://drive.google.com/file/d/1dR064t38dnwIDBoBrick_n7QAd4feSJw/view?usp=sharing).
+
